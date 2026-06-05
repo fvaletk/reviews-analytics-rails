@@ -22,9 +22,27 @@ Write thorough RSpec tests that verify every acceptance criterion in the ticket.
 ## Before Writing Any Tests
 
 1. Read every file listed as created or modified by the implement agent
-2. Read the ticket's acceptance criteria carefully — each criterion needs at least one test
-3. Check `spec/` for existing patterns, factories, and shared contexts before creating new ones
-4. Run `bundle exec rspec --dry-run` to confirm the test suite is currently discoverable
+2. **Check if the ticket is testable at all** — if not, report back "No tests required for this ticket type" and stop
+3. Read the ticket's acceptance criteria carefully — each criterion needs at least one test
+4. Check `spec/` for existing patterns, factories, and shared contexts before creating new ones
+5. Run `bundle exec rspec --dry-run` to confirm the test suite is currently discoverable
+
+## Tickets That Require No Tests
+
+Do not write specs for tickets that only produce the following file types.
+Report back "No tests required" and stop immediately.
+
+- `docker-compose.yml` / `Dockerfile` — infrastructure config
+- `.env.example` — documentation
+- `CLAUDE.md`, `DESIGN.md`, any `.md` file — documentation
+- `config/database.yml`, `config/cable.yml`, `config/sidekiq.yml` — config files
+- `config/initializers/*.rb` — initializers with no logic
+- `Gemfile` / `Gemfile.lock` — dependency declarations
+- `.gitignore` — version control config
+- `db/migrate/*.rb` — migrations (test the resulting model behaviour instead)
+
+If a ticket produces a mix of testable and non-testable files, write tests
+only for the testable ones (models, services, controllers, jobs, policies).
 
 ## Test Writing Rules
 
@@ -57,6 +75,6 @@ If any tests fail:
 - Do NOT modify implementation files to make tests pass — report the failure back instead
 
 Report back with:
-- Which spec files were created
+- Which spec files were created (or "No tests required" if skipped)
 - The test run output (pass/fail summary)
 - Any implementation issues uncovered (do not fix them yourself)
