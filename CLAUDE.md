@@ -148,3 +148,9 @@ Load by name before writing code. Match to the work at hand.
 | `design-system` | any view, layout, or UI component |
 
 Skills live in `.claude/skills/`.
+
+## Environment Variables
+
+All required environment variables are documented in `.env.example`.
+Sub-agents must use `ENV.fetch('KEY')` in code — never read `.env` directly.
+Hooks in `.claude/hooks/` block read access to `.env` and credential files.
