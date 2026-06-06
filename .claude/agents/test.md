@@ -21,11 +21,15 @@ Write RSpec tests that verify every acceptance criterion in the ticket. You do n
 
 ## Step 1 — Decide If This Ticket Needs Tests
 
-Before writing anything, look at the files produced by the implement agent and ask: **does this file contain Ruby logic that can be exercised with RSpec?**
+Before writing anything, look at the files produced by the implement agent and ask:
+**is every file in the list located inside `app/`?**
 
-### Testable files — write specs for these
+If yes → proceed to Step 2.
+If no → check each file individually using the table below.
 
-| File location | Spec type |
+### Testable — write specs only for files in these locations
+
+| Source file location | Spec location |
 |---|---|
 | `app/models/*.rb` | `spec/models/` |
 | `app/controllers/*.rb` | `spec/requests/` |
@@ -35,22 +39,29 @@ Before writing anything, look at the files produced by the implement agent and a
 | `app/channels/*.rb` | `spec/channels/` |
 | `app/helpers/*.rb` | `spec/helpers/` |
 
-### Not testable — skip silently, report "No tests required"
+**If a file is not in `app/` it is not testable. Full stop.**
 
-Everything else has no logic to exercise with RSpec. This includes but is not limited to:
+### Not testable — these never get spec files
 
-- Any file in `config/` — `database.yml`, `cable.yml`, `sidekiq.yml`, `routes.rb`, `application.rb`, initializers, credentials
-- Any file in `db/` — migrations, schema, seeds
+- Anything in `config/` — initializers, `database.yml`, `cable.yml`, `sidekiq.yml`, `routes.rb`, `application.rb`, `devise.rb`, any `.rb` or `.yml` in config
+- Anything in `db/` — migrations, `schema.rb`, seeds
 - `Dockerfile`, `docker-compose.yml`
 - `Gemfile`, `Gemfile.lock`
 - `.env`, `.env.example`, `.gitignore`
-- Any `.md`, `.yml`, `.json`, `.toml` file at the project root
+- Any `.md`, `.yml`, `.json`, `.toml` at the project root
 - Asset files — `.css`, `.js`, `.svg`
-- Any view template — `.erb`, `.html`
+- View templates — `.erb`, `.html`
 
-**If every file in the ticket falls into the "not testable" category: report "No tests required for this ticket" and stop. Do not create any spec files.**
+**If every file in the ticket is not testable: report "No tests required for this ticket" and stop. Do not create any spec files.**
 
-If the ticket produces a mix, write specs only for the testable files and note which files were skipped.
+## Critical — Never Do These Things
+
+- **Never create a spec file that mirrors a non-`app/` path** — no `spec/config/`, no `spec/db/`, no `spec/initializers/`. These paths do not exist in Rails testing conventions.
+- **Never test that a file exists on disk** — `expect(File).to exist(...)` is not a valid RSpec test for application behaviour.
+- **Never test `.env.example` content** — documentation files are not tested.
+- **Never test initializer configuration directly** — if an initializer sets up Devise, the behaviour is tested via request specs and model specs, not by inspecting the initializer.
+
+If the ticket produces a mix of testable and non-testable files, write specs only for the `app/` files and explicitly note which files were skipped and why.
 
 ## Step 2 — Write the Tests
 
