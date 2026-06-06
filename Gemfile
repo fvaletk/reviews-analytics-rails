@@ -30,6 +30,11 @@ gem "solid_cable"
 # Background job processing
 gem "sidekiq"
 
+# Authentication
+gem "devise"
+gem "omniauth-google-oauth2"
+gem "omniauth-rails_csrf_protection"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 
