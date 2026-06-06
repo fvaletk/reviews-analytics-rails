@@ -121,4 +121,75 @@ RSpec.describe User, type: :model do
       expect { duplicate.save(validate: false) }.to raise_error(ActiveRecord::RecordNotUnique)
     end
   end
+
+  describe ".from_omniauth" do
+    let(:auth) do
+      OmniAuth::AuthHash.new(
+        provider: "google_oauth2",
+        uid: "123456789",
+        info: {
+          email: "test@example.com",
+          name: "Test User",
+          image: "https://example.com/avatar.jpg"
+        }
+      )
+    end
+
+    context "when no user exists with the given provider and uid" do
+      it "creates a new user" do
+        expect { described_class.from_omniauth(auth) }.to change(User, :count).by(1)
+      end
+
+      it "sets email from auth hash" do
+        user = described_class.from_omniauth(auth)
+        expect(user.email).to eq("test@example.com")
+      end
+
+      it "sets name from auth hash" do
+        user = described_class.from_omniauth(auth)
+        expect(user.name).to eq("Test User")
+      end
+
+      it "sets avatar_url from auth hash info.image" do
+        user = described_class.from_omniauth(auth)
+        expect(user.avatar_url).to eq("https://example.com/avatar.jpg")
+      end
+
+      it "persists the user" do
+        user = described_class.from_omniauth(auth)
+        expect(user).to be_persisted
+      end
+    end
+
+    context "when a user already exists with the given provider and uid" do
+      let!(:existing_user) do
+        create(:user, provider: "google_oauth2", uid: "123456789",
+               email: "old@example.com", name: "Old Name", avatar_url: "https://example.com/old.jpg")
+      end
+
+      it "does not create a new user" do
+        expect { described_class.from_omniauth(auth) }.not_to change(User, :count)
+      end
+
+      it "returns the existing user" do
+        user = described_class.from_omniauth(auth)
+        expect(user.id).to eq(existing_user.id)
+      end
+
+      it "updates the email" do
+        user = described_class.from_omniauth(auth)
+        expect(user.email).to eq("test@example.com")
+      end
+
+      it "updates the name" do
+        user = described_class.from_omniauth(auth)
+        expect(user.name).to eq("Test User")
+      end
+
+      it "updates the avatar_url" do
+        user = described_class.from_omniauth(auth)
+        expect(user.avatar_url).to eq("https://example.com/avatar.jpg")
+      end
+    end
+  end
 end
