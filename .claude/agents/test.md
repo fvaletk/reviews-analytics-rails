@@ -80,11 +80,13 @@ Map each acceptance criterion checkbox to at least one `it` block.
 
 ## Step 3 — Run and Report
 
-Run only the new spec files:
+Run only the new spec files inside the Docker container:
 
 ```bash
-bundle exec rspec spec/path/to/new_spec.rb --format documentation
+docker compose exec web bundle exec rspec spec/path/to/new_spec.rb --format documentation
 ```
+
+Never run `bundle exec rspec` directly on the host — Ruby and the database live inside Docker.
 
 If any tests fail:
 - Fix the spec if it is a setup error (wrong factory, missing stub)

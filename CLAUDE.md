@@ -12,6 +12,16 @@ competitive intelligence reports using Gemini.
 
 ---
 
+## Prerequisites
+
+Before running `/work-next-ticket`, ensure Docker is running:
+```bash
+docker compose up -d
+```
+All agent commands execute inside the running containers.
+
+---
+
 ## Common Commands
 
 ```bash
@@ -38,6 +48,19 @@ bin/rails db:create db:migrate db:seed
 ```
 
 ---
+
+## Running Commands
+
+All commands must be run inside the Docker container, never on the host machine.
+Use `docker compose exec web <command>` for all Rails, Rake, and RSpec commands.
+
+```bash
+# Correct
+docker compose exec web bundle exec rspec spec/models/user_spec.rb
+
+# Wrong — never run directly on host
+bundle exec rspec spec/models/user_spec.rb
+```
 
 ## Architecture
 
