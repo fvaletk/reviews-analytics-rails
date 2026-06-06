@@ -1,11 +1,12 @@
 # This file is copied to spec/ when you run 'rails generate rspec:install'
 require 'spec_helper'
-ENV['RAILS_ENV'] ||= 'test'
+ENV['RAILS_ENV'] = 'test'
 ENV['GOOGLE_CLIENT_ID'] ||= 'test_client_id'
 ENV['GOOGLE_CLIENT_SECRET'] ||= 'test_client_secret'
 ENV['GOOGLE_OAUTH_CLIENT_ID'] ||= 'test_oauth_client_id'
 ENV['GOOGLE_OAUTH_CLIENT_SECRET'] ||= 'test_oauth_client_secret'
 require_relative '../config/environment'
+
 # Prevent database truncation if the environment is production
 abort("The Rails environment is running in production mode!") if Rails.env.production?
 # Uncomment the line below in case you have `--require rails_helper` in the `.rspec` file

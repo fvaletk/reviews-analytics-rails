@@ -1,0 +1,21 @@
+<% content_for :title, "Dashboard — Reviews Analytics" %>
+
+<main class="page-container">
+  <header class="page-header" style="display: flex; align-items: center; justify-content: space-between;">
+    <h1 class="page-title">Dashboard</h1>
+
+    <%= link_to "Sign out", sign_out_path, data: { turbo_method: :delete }, class: "btn-ghost" %>
+  </header>
+
+  <div class="page-body">
+    <div class="card">
+      <h2 class="card-title">Welcome back</h2>
+      <p class="card-body" style="font-family: var(--font-body); color: var(--text-secondary); margin-bottom: var(--space-2);">
+        <%= current_user.name %>
+      </p>
+      <p style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-tertiary);">
+        <%= current_user.email %>
+      </p>
+    </div>
+  </div>
+</main>
