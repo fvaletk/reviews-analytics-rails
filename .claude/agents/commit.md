@@ -22,8 +22,10 @@ You are responsible for the final step of the ticket pipeline: verifying tests p
 ### Step 1 — Run the full test suite
 
 ```bash
-bundle exec rspec --format progress
+docker compose exec web bundle exec rspec --format progress
 ```
+
+Never run the test suite directly on the host machine.
 
 If **any test fails**:
 - Report the failure output clearly
