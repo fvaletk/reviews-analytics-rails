@@ -49,3 +49,10 @@ Report back with:
 - Any follow-up concerns for the test agent
 
 Do not run the test suite. Do not commit. That is the next agent's job.
+
+## Credentials and Environment Variables
+
+- Never write real values into `.env` — not via file tools, not via Bash
+- If a task requires env vars to be set, document what is needed and stop
+- The developer manages `.env` manually — your job is to write code that
+  calls `ENV.fetch('KEY')`, not to populate the values

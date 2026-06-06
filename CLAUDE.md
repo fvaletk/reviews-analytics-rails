@@ -154,3 +154,5 @@ Skills live in `.claude/skills/`.
 All required environment variables are documented in `.env.example`.
 Sub-agents must use `ENV.fetch('KEY')` in code — never read `.env` directly.
 Hooks in `.claude/hooks/` block read access to `.env` and credential files.
+**Never write, copy, or generate credential values into `.env` — the developer
+manages this file manually. If a variable is missing, report it and stop.**
