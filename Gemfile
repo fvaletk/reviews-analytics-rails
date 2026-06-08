@@ -35,6 +35,9 @@ gem "devise"
 gem "omniauth-google-oauth2"
 gem "omniauth-rails_csrf_protection"
 
+# Authorization
+gem "pundit"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

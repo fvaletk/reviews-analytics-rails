@@ -5,9 +5,11 @@ class WorkspacesController < ApplicationController
 
   def new
     @workspace = Workspace.new
+    authorize Workspace
   end
 
   def create
+    authorize Workspace
     workspace = Workspaces::CreateWorkspaceService.call(
       name: params.dig(:workspace, :name),
       user: current_user
@@ -20,5 +22,7 @@ class WorkspacesController < ApplicationController
   end
 
   def show
+    @workspace = Workspace.find(params[:id])
+    authorize @workspace
   end
 end
