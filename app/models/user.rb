@@ -4,6 +4,9 @@ class User < ApplicationRecord
   devise :omniauthable, :rememberable, :trackable,
          omniauth_providers: [:google_oauth2]
 
+  has_many :workspace_memberships, dependent: :destroy
+  has_many :workspaces, through: :workspace_memberships
+
   validates :email, presence: true, uniqueness: true
   validates :provider, presence: true
   validates :uid, presence: true

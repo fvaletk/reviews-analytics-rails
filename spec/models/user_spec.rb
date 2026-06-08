@@ -113,6 +113,38 @@ RSpec.describe User, type: :model do
     end
   end
 
+  describe "associations" do
+    it "has many workspace_memberships" do
+      association = described_class.reflect_on_association(:workspace_memberships)
+      expect(association.macro).to eq(:has_many)
+    end
+
+    it "destroys workspace_memberships when user is destroyed" do
+      association = described_class.reflect_on_association(:workspace_memberships)
+      expect(association.options[:dependent]).to eq(:destroy)
+    end
+
+    it "has many workspaces through workspace_memberships" do
+      association = described_class.reflect_on_association(:workspaces)
+      expect(association.macro).to eq(:has_many)
+      expect(association.options[:through]).to eq(:workspace_memberships)
+    end
+
+    it "returns workspaces through memberships" do
+      user = create(:user)
+      workspace = create(:workspace)
+      create(:workspace_membership, user: user, workspace: workspace)
+      expect(user.workspaces).to include(workspace)
+    end
+
+    it "cleans up memberships when user is destroyed" do
+      user = create(:user)
+      workspace = create(:workspace)
+      create(:workspace_membership, user: user, workspace: workspace)
+      expect { user.destroy }.to change(WorkspaceMembership, :count).by(-1)
+    end
+  end
+
   describe "database constraints" do
     it "enforces uniqueness of (provider, uid) at the database level" do
       existing = create(:user, provider: "google_oauth2", uid: "abc123")

@@ -1,0 +1,10 @@
+# frozen_string_literal: true
+
+FactoryBot.define do
+  factory :workspace_membership do
+    user
+    workspace
+    role { :admin }
+    joined_at { Time.current }
+  end
+end
