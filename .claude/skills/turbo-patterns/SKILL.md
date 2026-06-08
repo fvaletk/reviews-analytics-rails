@@ -91,6 +91,29 @@ export default class extends Controller {
 }
 ```
 
+## OAuth and External Redirects
+
+Never use `link_to` for OAuth initiation. OAuth requires a POST request — an
+`<a>` tag sends GET and will cause the authentication flow to fail.
+
+Always use `button_to` with `method: :post` and `data: { turbo: false }`:
+
+```erb
+<%= button_to user_google_oauth2_omniauth_authorize_path,
+      method: :post,
+      data: { turbo: false },
+      class: "btn-primary" do %>
+  <img src="https://www.svgrepo.com/show/475656/google-color.svg"
+       alt="Google" class="h-5 w-5 mr-2">
+  Sign in with Google
+<% end %>
+```
+
+`data: { turbo: false }` is mandatory — Turbo intercepts form submissions by
+default and breaks the OAuth redirect cycle if omitted. Any link or button that
+triggers an external redirect (OAuth, payment providers, third-party SSO) must
+have `data: { turbo: false }`.
+
 ## Rules
 
 - Never write `fetch()` or `XMLHttpRequest` manually — Turbo handles it
