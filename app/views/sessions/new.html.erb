@@ -5,7 +5,13 @@
     <h1 class="auth-title">Reviews Analytics</h1>
     <p class="auth-subtitle">Competitive intelligence from your app store reviews</p>
 
-    <%= link_to user_google_oauth2_omniauth_authorize_path, class: "btn-primary" do %>
+    <%= button_to user_google_oauth2_omniauth_authorize_path,
+          method: :post,
+          data: { turbo: false },
+          class: "btn-primary" do %>
+      <img src="https://www.svgrepo.com/show/475656/google-color.svg"
+           alt="Google"
+           class="h-5 w-5 mr-2">
       Sign in with Google
     <% end %>
   </div>
