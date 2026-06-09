@@ -1,5 +1,39 @@
 <% content_for :title, "#{@workspace.name} — Reviews Analytics" %>
 
+<nav style="
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  padding: var(--space-4) var(--space-6);
+">
+  <div style="
+    max-width: 1100px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  ">
+    <span style="
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      font-weight: 600;
+      color: var(--text-primary);
+      letter-spacing: var(--tracking-tight);
+    ">
+      <%= @workspace.name %>
+    </span>
+
+    <%= link_to "Sign out", sign_out_path,
+          data: { turbo_method: :delete },
+          style: "
+            font-family: var(--font-body);
+            font-size: var(--text-sm);
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-decoration: none;
+          " %>
+  </div>
+</nav>
+
 <main class="page-container">
   <header class="page-header">
     <div class="flex" style="align-items: center; justify-content: space-between;">
@@ -45,15 +79,54 @@
                   <%= m.user.email %>
                 </span>
               </div>
-              <span style="
-                font-family: var(--font-mono);
-                font-size: var(--text-xs);
-                color: var(--text-secondary);
-                text-transform: uppercase;
-                letter-spacing: var(--tracking-wider);
-              ">
-                <%= m.role %>
-              </span>
+
+              <div class="flex" style="align-items: center; gap: var(--space-6);">
+                <span style="
+                  font-family: var(--font-mono);
+                  font-size: var(--text-xs);
+                  color: var(--text-muted);
+                ">
+                  <% if m.joined_at.present? %>
+                    Joined <%= m.joined_at.strftime("%-d %b %Y") %>
+                  <% else %>
+                    Pending
+                  <% end %>
+                </span>
+
+                <span style="
+                  font-family: var(--font-mono);
+                  font-size: var(--text-xs);
+                  color: var(--text-secondary);
+                  text-transform: uppercase;
+                  letter-spacing: var(--tracking-wider);
+                  background: var(--bg-elevated);
+                  border: 1px solid var(--border-subtle);
+                  border-radius: var(--radius-sm);
+                  padding: var(--space-1) var(--space-2);
+                ">
+                  <%= m.role %>
+                </span>
+
+                <% if policy(@workspace).invite? %>
+                  <%= button_to "REMOVE",
+                        workspace_membership_path(@workspace, m),
+                        method: :delete,
+                        style: "
+                          font-family: var(--font-body);
+                          font-size: var(--text-xs);
+                          font-weight: 600;
+                          letter-spacing: var(--tracking-wider);
+                          text-transform: uppercase;
+                          color: var(--critical);
+                          background: transparent;
+                          border: 1px solid var(--critical);
+                          border-radius: var(--radius-sm);
+                          padding: var(--space-1) var(--space-3);
+                          cursor: pointer;
+                        ",
+                        data: { turbo_confirm: "Remove #{m.user.name.presence || m.user.email} from this workspace?" } %>
+                <% end %>
+              </div>
             </li>
           <% end %>
         </ul>

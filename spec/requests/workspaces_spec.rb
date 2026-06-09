@@ -102,4 +102,103 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
   end
+
+  # ---------------------------------------------------------------------------
+  # GET /workspaces/:id
+  # ---------------------------------------------------------------------------
+  describe "GET /workspaces/:id" do
+    let(:workspace) { create(:workspace) }
+
+    # Helper — create a user with the given role in workspace
+    def member_with_role(role)
+      u = create(:user)
+      create(:workspace_membership, user: u, workspace: workspace, role: role)
+      u
+    end
+
+    context "when signed in as collaborator" do
+      before { sign_in member_with_role(:collaborator) }
+
+      it "returns 200 OK" do
+        get workspace_path(workspace)
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when signed in as admin" do
+      before { sign_in member_with_role(:admin) }
+
+      it "returns 200 OK" do
+        get workspace_path(workspace)
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when signed in as super_admin" do
+      before do
+        sign_in member_with_role(:super_admin)
+        # Add a second member so the REMOVE button appears in at least one row
+        create(:workspace_membership, workspace: workspace, role: :collaborator)
+      end
+
+      it "returns 200 OK" do
+        get workspace_path(workspace)
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "includes the INVITE MEMBER link in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).to include("INVITE MEMBER")
+      end
+
+      it "includes the REMOVE button in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).to include("REMOVE")
+      end
+    end
+
+    context "when signed in as collaborator (non-admin)" do
+      before { sign_in member_with_role(:collaborator) }
+
+      it "does not include the INVITE MEMBER link in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).not_to include("INVITE MEMBER")
+      end
+
+      it "does not include the REMOVE button in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).not_to include("REMOVE")
+      end
+    end
+
+    context "when signed in as admin (non-super_admin)" do
+      before { sign_in member_with_role(:admin) }
+
+      it "does not include the INVITE MEMBER link in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).not_to include("INVITE MEMBER")
+      end
+
+      it "does not include the REMOVE button in the response body" do
+        get workspace_path(workspace)
+        expect(response.body).not_to include("REMOVE")
+      end
+    end
+
+    context "when signed in as a non-member (authenticated but no membership)" do
+      before { sign_in create(:user) }
+
+      it "returns 404 (Pundit NotAuthorizedError)" do
+        get workspace_path(workspace)
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when not signed in" do
+      it "redirects to sign in" do
+        get workspace_path(workspace)
+        expect(response).to redirect_to(sign_in_path)
+      end
+    end
+  end
 end
