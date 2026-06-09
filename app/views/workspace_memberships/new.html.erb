@@ -1,0 +1,199 @@
+<% content_for :title, "Invite Member — #{@workspace.name} — Reviews Analytics" %>
+
+<main class="page-container">
+  <header class="page-header">
+    <h1 class="page-title">Invite Member</h1>
+    <p style="
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--text-secondary);
+      margin-top: var(--space-2);
+    ">
+      Workspace: <strong style="color: var(--text-primary);"><%= @workspace.name %></strong>
+    </p>
+  </header>
+
+  <div class="page-body">
+    <div class="flex" style="gap: var(--space-8); align-items: flex-start;">
+
+      <%# Invite form %>
+      <div class="card" style="max-width: 480px; flex: 1;">
+        <h2 class="card-title">Invite by Email</h2>
+
+        <% if flash[:alert] %>
+          <div style="
+            background: var(--critical-dim);
+            border: 1px solid var(--critical);
+            border-radius: var(--radius-md);
+            padding: var(--space-3) var(--space-4);
+            margin-bottom: var(--space-6);
+            font-family: var(--font-body);
+            font-size: var(--text-sm);
+            color: var(--critical);
+          ">
+            <%= flash[:alert] %>
+          </div>
+        <% end %>
+
+        <% if flash[:notice] %>
+          <div style="
+            background: var(--success-dim);
+            border: 1px solid var(--success);
+            border-radius: var(--radius-md);
+            padding: var(--space-3) var(--space-4);
+            margin-bottom: var(--space-6);
+            font-family: var(--font-body);
+            font-size: var(--text-sm);
+            color: var(--success);
+          ">
+            <%= flash[:notice] %>
+          </div>
+        <% end %>
+
+        <%= form_with model: @membership,
+                      url: workspace_memberships_path(@workspace),
+                      method: :post do |f| %>
+
+          <div style="margin-bottom: var(--space-6);">
+            <%= label_tag :email, "Email Address",
+                  style: "
+                    display: block;
+                    font-family: var(--font-body);
+                    font-size: var(--text-sm);
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    letter-spacing: var(--tracking-wider);
+                    text-transform: uppercase;
+                    margin-bottom: var(--space-2);
+                  " %>
+            <%= text_field_tag "workspace_membership[email]",
+                  nil,
+                  placeholder: "colleague@example.com",
+                  class: "input",
+                  type: "email",
+                  autofocus: true %>
+          </div>
+
+          <div style="margin-bottom: var(--space-6);">
+            <%= label_tag :role, "Role",
+                  style: "
+                    display: block;
+                    font-family: var(--font-body);
+                    font-size: var(--text-sm);
+                    font-weight: 600;
+                    color: var(--text-secondary);
+                    letter-spacing: var(--tracking-wider);
+                    text-transform: uppercase;
+                    margin-bottom: var(--space-2);
+                  " %>
+            <%= select_tag "workspace_membership[role]",
+                  options_for_select([["Collaborator", "collaborator"], ["Admin", "admin"]], "collaborator"),
+                  class: "input" %>
+          </div>
+
+          <div class="flex" style="justify-content: flex-end;">
+            <%= f.submit "SEND INVITE", class: "btn-primary" %>
+          </div>
+        <% end %>
+      </div>
+
+      <%# Members list %>
+      <div class="card" style="flex: 1;">
+        <h2 class="card-title">Current Members</h2>
+
+        <% members = @workspace.workspace_memberships.includes(:user).order(:role) %>
+        <% if members.any? %>
+          <ul style="list-style: none; margin: 0; padding: 0;">
+            <% members.each do |m| %>
+              <li style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: var(--space-3) 0;
+                border-bottom: 1px solid var(--border-subtle);
+              ">
+                <div>
+                  <span style="
+                    font-family: var(--font-body);
+                    font-size: var(--text-sm);
+                    color: var(--text-primary);
+                    font-weight: 500;
+                  ">
+                    <%= m.user.name.presence || m.user.email %>
+                  </span>
+                  <span style="
+                    display: block;
+                    font-family: var(--font-mono);
+                    font-size: var(--text-xs);
+                    color: var(--text-muted);
+                  ">
+                    <%= m.user.email %>
+                  </span>
+                </div>
+                <span style="
+                  font-family: var(--font-mono);
+                  font-size: var(--text-xs);
+                  color: var(--text-secondary);
+                  text-transform: uppercase;
+                  letter-spacing: var(--tracking-wider);
+                ">
+                  <%= m.role %>
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p style="
+            font-family: var(--font-body);
+            font-size: var(--text-sm);
+            color: var(--text-muted);
+          ">No members yet.</p>
+        <% end %>
+
+        <%# Pending invitations %>
+        <% pending = @workspace.pending_invitations.order(:email) %>
+        <% if pending.any? %>
+          <h3 style="
+            font-family: var(--font-body);
+            font-size: var(--text-sm);
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: var(--tracking-wider);
+            text-transform: uppercase;
+            margin-top: var(--space-6);
+            margin-bottom: var(--space-3);
+          ">Pending Invites</h3>
+          <ul style="list-style: none; margin: 0; padding: 0;">
+            <% pending.each do |inv| %>
+              <li style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: var(--space-3) 0;
+                border-bottom: 1px solid var(--border-subtle);
+              ">
+                <span style="
+                  font-family: var(--font-mono);
+                  font-size: var(--text-sm);
+                  color: var(--text-muted);
+                ">
+                  <%= inv.email %>
+                </span>
+                <span style="
+                  font-family: var(--font-mono);
+                  font-size: var(--text-xs);
+                  color: var(--text-secondary);
+                  text-transform: uppercase;
+                  letter-spacing: var(--tracking-wider);
+                ">
+                  <%= inv.role %> &middot; pending
+                </span>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+      </div>
+
+    </div>
+  </div>
+</main>

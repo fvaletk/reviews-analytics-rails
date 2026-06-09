@@ -224,4 +224,86 @@ RSpec.describe User, type: :model do
       end
     end
   end
+
+  describe "#activate_pending_invitations!" do
+    let(:user)      { create(:user, email: "pending@example.com") }
+    let(:workspace) { create(:workspace) }
+
+    context "when there are pending invitations matching the user's email" do
+      let!(:invitation) do
+        create(:pending_invitation, workspace: workspace, email: "pending@example.com", role: :admin)
+      end
+
+      it "creates a WorkspaceMembership for the user" do
+        expect { user.activate_pending_invitations! }.to change(WorkspaceMembership, :count).by(1)
+      end
+
+      it "sets joined_at on the new membership" do
+        user.activate_pending_invitations!
+        membership = WorkspaceMembership.find_by(user: user, workspace: workspace)
+        expect(membership.joined_at).not_to be_nil
+      end
+
+      it "assigns the role from the invitation" do
+        user.activate_pending_invitations!
+        membership = WorkspaceMembership.find_by(user: user, workspace: workspace)
+        expect(membership.role).to eq("admin")
+      end
+
+      it "destroys the PendingInvitation after activation" do
+        expect { user.activate_pending_invitations! }.to change(PendingInvitation, :count).by(-1)
+      end
+
+      it "activates multiple pending invitations across different workspaces" do
+        other_workspace = create(:workspace)
+        create(:pending_invitation, workspace: other_workspace, email: "pending@example.com", role: :collaborator)
+
+        expect { user.activate_pending_invitations! }.to change(WorkspaceMembership, :count).by(2)
+      end
+    end
+
+    context "when the user is already a member of the invited workspace" do
+      let!(:invitation) do
+        create(:pending_invitation, workspace: workspace, email: "pending@example.com", role: :admin)
+      end
+
+      before { create(:workspace_membership, user: user, workspace: workspace, role: :collaborator) }
+
+      it "does not create a duplicate WorkspaceMembership" do
+        expect { user.activate_pending_invitations! }.not_to change(WorkspaceMembership, :count)
+      end
+    end
+
+    context "when there are no pending invitations for the user" do
+      it "does not create any WorkspaceMembership" do
+        expect { user.activate_pending_invitations! }.not_to change(WorkspaceMembership, :count)
+      end
+    end
+
+    context "called via User.from_omniauth for a new sign-in" do
+      let!(:invitation) do
+        create(:pending_invitation, workspace: workspace, email: "oauth-pending@example.com", role: :collaborator)
+      end
+
+      let(:auth) do
+        OmniAuth::AuthHash.new(
+          provider: "google_oauth2",
+          uid:      SecureRandom.hex,
+          info: {
+            email: "oauth-pending@example.com",
+            name:  "OAuth User",
+            image: nil
+          }
+        )
+      end
+
+      it "activates the pending invitation during OAuth sign-in" do
+        expect { described_class.from_omniauth(auth) }.to change(WorkspaceMembership, :count).by(1)
+      end
+
+      it "destroys the PendingInvitation during OAuth sign-in" do
+        expect { described_class.from_omniauth(auth) }.to change(PendingInvitation, :count).by(-1)
+      end
+    end
+  end
 end

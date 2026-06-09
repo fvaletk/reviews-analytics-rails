@@ -17,6 +17,24 @@ class User < ApplicationRecord
     user.name = auth.info.name
     user.avatar_url = auth.info.image
     user.save!
+    user.activate_pending_invitations!
     user
+  end
+
+  def activate_pending_invitations!
+    pending = PendingInvitation.where(email: email)
+    return unless pending.exists?
+
+    pending.each do |invitation|
+      next if workspace_memberships.exists?(workspace_id: invitation.workspace_id)
+
+      workspace_memberships.create!(
+        workspace_id:        invitation.workspace_id,
+        role:                invitation.role,
+        joined_at:           Time.current,
+        invited_by_user_id:  invitation.invited_by_user_id
+      )
+      invitation.destroy!
+    end
   end
 end
