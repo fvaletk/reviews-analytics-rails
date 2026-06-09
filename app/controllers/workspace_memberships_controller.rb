@@ -27,6 +27,26 @@ class WorkspaceMembershipsController < ApplicationController
     render :new, status: :unprocessable_entity
   end
 
+  def destroy
+    authorize @workspace, :invite?
+
+    @membership_to_remove = @workspace.workspace_memberships.find(params[:id])
+
+    sole_super_admin = @workspace.workspace_memberships.where(role: :super_admin).count == 1 &&
+                       @membership_to_remove.super_admin? &&
+                       @membership_to_remove.user_id == current_user.id
+
+    if sole_super_admin
+      redirect_to new_workspace_membership_path(@workspace),
+                  alert: "Cannot remove the sole super admin."
+      return
+    end
+
+    @membership_to_remove.destroy!
+    redirect_to new_workspace_membership_path(@workspace),
+                notice: "Member removed successfully."
+  end
+
   private
 
   def set_workspace

@@ -181,4 +181,135 @@ RSpec.describe "WorkspaceMemberships", type: :request do
       end
     end
   end
+
+  # -------------------------------------------------------------------------
+  # DELETE /workspaces/:workspace_id/memberships/:id
+  # -------------------------------------------------------------------------
+  describe "DELETE /workspaces/:workspace_id/memberships/:id" do
+    # -----------------------------------------------------------------------
+    # Case 1: super_admin removes another member
+    # -----------------------------------------------------------------------
+    context "when signed in as super_admin removing another member" do
+      let(:super_admin) { user_with_role(:super_admin) }
+      let!(:target_membership) do
+        create(:workspace_membership, workspace: workspace, role: :collaborator)
+      end
+
+      before { sign_in super_admin }
+
+      it "destroys the membership" do
+        expect {
+          delete workspace_membership_path(workspace, target_membership)
+        }.to change(WorkspaceMembership, :count).by(-1)
+      end
+
+      it "redirects to the new membership path" do
+        delete workspace_membership_path(workspace, target_membership)
+        expect(response).to redirect_to(new_workspace_membership_path(workspace))
+      end
+
+      it "sets a success notice" do
+        delete workspace_membership_path(workspace, target_membership)
+        expect(flash[:notice]).to eq("Member removed successfully.")
+      end
+
+      it "does not delete any workspace data (workspace still exists)" do
+        delete workspace_membership_path(workspace, target_membership)
+        expect(Workspace.exists?(workspace.id)).to be true
+      end
+    end
+
+    # -----------------------------------------------------------------------
+    # Case 2: sole super_admin tries to remove themselves
+    # -----------------------------------------------------------------------
+    context "when the sole super_admin tries to remove themselves" do
+      let(:sole_super_admin) { user_with_role(:super_admin) }
+      let!(:sole_super_admin_membership) do
+        WorkspaceMembership.find_by!(user: sole_super_admin, workspace: workspace)
+      end
+
+      before { sign_in sole_super_admin }
+
+      it "does not destroy the membership" do
+        expect {
+          delete workspace_membership_path(workspace, sole_super_admin_membership)
+        }.not_to change(WorkspaceMembership, :count)
+      end
+
+      it "redirects to the new membership path" do
+        delete workspace_membership_path(workspace, sole_super_admin_membership)
+        expect(response).to redirect_to(new_workspace_membership_path(workspace))
+      end
+
+      it "sets an alert message" do
+        delete workspace_membership_path(workspace, sole_super_admin_membership)
+        expect(flash[:alert]).to eq("Cannot remove the sole super admin.")
+      end
+    end
+
+    # -----------------------------------------------------------------------
+    # Case 3: admin or collaborator attempting DELETE — 404
+    # -----------------------------------------------------------------------
+    context "when signed in as admin" do
+      let!(:target_membership) do
+        create(:workspace_membership, workspace: workspace, role: :collaborator)
+      end
+
+      before { sign_in user_with_role(:admin) }
+
+      it "returns 404 (Pundit NotAuthorizedError)" do
+        delete workspace_membership_path(workspace, target_membership)
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it "does not destroy the membership" do
+        expect {
+          delete workspace_membership_path(workspace, target_membership)
+        }.not_to change(WorkspaceMembership, :count)
+      end
+    end
+
+    context "when signed in as collaborator" do
+      let!(:target_membership) do
+        create(:workspace_membership, workspace: workspace, role: :collaborator)
+      end
+
+      before { sign_in user_with_role(:collaborator) }
+
+      it "returns 404 (Pundit NotAuthorizedError)" do
+        delete workspace_membership_path(workspace, target_membership)
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it "does not destroy the membership" do
+        expect {
+          delete workspace_membership_path(workspace, target_membership)
+        }.not_to change(WorkspaceMembership, :count)
+      end
+    end
+
+    # -----------------------------------------------------------------------
+    # Case 4: cross-workspace membership deletion attempt — 404
+    # -----------------------------------------------------------------------
+    context "when super_admin tries to delete a membership from a different workspace" do
+      let(:super_admin) { user_with_role(:super_admin) }
+      let(:other_workspace) { create(:workspace) }
+      let!(:other_membership) do
+        create(:workspace_membership, workspace: other_workspace, role: :collaborator)
+      end
+
+      before { sign_in super_admin }
+
+      it "returns 404" do
+        delete workspace_membership_path(workspace, other_membership)
+        expect(response).to have_http_status(:not_found)
+      end
+
+      it "does not destroy the membership" do
+        expect {
+          delete workspace_membership_path(workspace, other_membership)
+        }.not_to change(WorkspaceMembership, :count)
+      end
+    end
+  end
 end
