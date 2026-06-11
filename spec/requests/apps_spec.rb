@@ -14,6 +14,68 @@ RSpec.describe "Apps", type: :request do
   end
 
   # ---------------------------------------------------------------------------
+  # GET /workspaces/:workspace_id/apps/:id
+  # ---------------------------------------------------------------------------
+  describe "GET /workspaces/:workspace_id/apps/:id" do
+    let(:the_app) { create(:app, workspace: workspace) }
+
+    context "when signed in as a collaborator" do
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "returns 200 OK" do
+        get workspace_app_path(workspace, the_app)
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when signed in as an admin" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "returns 200 OK" do
+        get workspace_app_path(workspace, the_app)
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when signed in as a super_admin" do
+      before do
+        make_member(role: :super_admin)
+        sign_in user
+      end
+
+      it "returns 200 OK" do
+        get workspace_app_path(workspace, the_app)
+        expect(response).to have_http_status(:ok)
+      end
+    end
+
+    context "when the user is not a workspace member" do
+      let(:other_workspace) { create(:workspace) }
+      let(:other_app)       { create(:app, workspace: other_workspace) }
+
+      before { sign_in user }
+
+      it "returns 404" do
+        get workspace_app_path(other_workspace, other_app)
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when not signed in" do
+      it "redirects to sign in" do
+        get workspace_app_path(workspace, the_app)
+        expect(response).to redirect_to(sign_in_path)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # GET /workspaces/:workspace_id/apps/new
   # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/new" do

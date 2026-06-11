@@ -450,3 +450,158 @@ a:hover {
   margin-top: var(--space-2);
   margin-bottom: 0;
 }
+
+/* ============================================================
+   Apps — show page
+   ============================================================ */
+
+.app-show-back-link {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  margin-bottom: var(--space-4);
+  display: inline-block;
+  transition: color var(--transition-base);
+}
+
+.app-show-back-link:hover {
+  color: var(--text-primary);
+}
+
+.app-show-title {
+  margin-top: var(--space-3);
+}
+
+.app-show-card {
+  max-width: 640px;
+}
+
+.app-detail-list {
+  margin: 0;
+  padding: 0;
+}
+
+.app-detail-row {
+  display: flex;
+  align-items: baseline;
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.app-detail-row:last-child {
+  border-bottom: none;
+}
+
+.app-detail-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  min-width: 120px;
+  flex-shrink: 0;
+}
+
+.app-detail-value {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-primary);
+  margin: 0;
+  word-break: break-all;
+}
+
+.app-detail-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--accent);
+  text-decoration: none;
+  word-break: break-all;
+  transition: color var(--transition-base);
+}
+
+.app-detail-link:hover {
+  color: var(--accent-hover);
+}
+
+.app-detail-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+}
+
+/* ============================================================
+   Workspaces — apps listing on show page
+   ============================================================ */
+
+.workspace-apps-card {
+  margin-bottom: var(--space-6);
+}
+
+.workspace-apps-header {
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.workspace-apps-title {
+  margin-bottom: 0;
+}
+
+.workspace-app-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.workspace-app-item {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.workspace-app-item:last-child {
+  border-bottom: none;
+}
+
+.workspace-app-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  text-decoration: none;
+  transition: background var(--transition-base);
+}
+
+.workspace-app-link:hover .workspace-app-name {
+  color: var(--accent-hover);
+}
+
+.workspace-app-name {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent);
+  transition: color var(--transition-base);
+}
+
+.workspace-app-stores {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.workspace-app-store-tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+.workspace-apps-empty {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}

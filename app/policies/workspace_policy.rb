@@ -21,6 +21,10 @@ class WorkspacePolicy < ApplicationPolicy
     super_admin?
   end
 
+  def create_app?
+    admin? || super_admin?
+  end
+
   def generate_report?
     admin? || super_admin?
   end

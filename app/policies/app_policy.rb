@@ -8,11 +8,30 @@ class AppPolicy < ApplicationPolicy
   end
 
   def create?
-    member?
+    admin? || super_admin?
   end
 
   def new?
     create?
+  end
+
+  def update?
+    admin? || super_admin?
+  end
+
+  def edit?
+    update?
+  end
+
+  def destroy?
+    admin? || super_admin?
+  end
+
+  class Scope < Scope
+    def resolve
+      scope.joins(workspace: :workspace_memberships)
+           .where(workspace_memberships: { user: user })
+    end
   end
 
   private
@@ -23,5 +42,13 @@ class AppPolicy < ApplicationPolicy
 
   def member?
     membership.present?
+  end
+
+  def admin?
+    membership&.admin?
+  end
+
+  def super_admin?
+    membership&.super_admin?
   end
 end

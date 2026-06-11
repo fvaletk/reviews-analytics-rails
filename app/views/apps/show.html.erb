@@ -2,10 +2,57 @@
 
 <main class="page-container">
   <header class="page-header">
-    <h1 class="page-title"><%= @app.name %></h1>
+    <div class="flex items-center">
+      <%= link_to "← #{@workspace.name}", workspace_path(@workspace), class: "app-show-back-link" %>
+    </div>
+    <h1 class="page-title app-show-title"><%= @app.name %></h1>
   </header>
 
   <div class="page-body">
-    <p class="app-form-subheading">App created successfully.</p>
+    <div class="card app-show-card">
+      <h2 class="card-title">Store Details</h2>
+
+      <dl class="app-detail-list">
+        <% if @app.app_store_id.present? %>
+          <div class="app-detail-row">
+            <dt class="app-detail-label">App Store</dt>
+            <dd class="app-detail-value">
+              <%= link_to "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
+                    "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    class: "app-detail-link" %>
+            </dd>
+          </div>
+        <% end %>
+
+        <% if @app.play_store_id.present? %>
+          <div class="app-detail-row">
+            <dt class="app-detail-label">Play Store</dt>
+            <dd class="app-detail-value">
+              <%= link_to "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
+                    "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
+                    target: "_blank",
+                    rel: "noopener noreferrer",
+                    class: "app-detail-link" %>
+            </dd>
+          </div>
+        <% end %>
+
+        <div class="app-detail-row">
+          <dt class="app-detail-label">Created By</dt>
+          <dd class="app-detail-value app-detail-meta">
+            <%= @app.created_by.name.presence || @app.created_by.email %>
+          </dd>
+        </div>
+
+        <div class="app-detail-row">
+          <dt class="app-detail-label">Created</dt>
+          <dd class="app-detail-value app-detail-meta">
+            <%= @app.created_at.strftime("%-d %b %Y") %>
+          </dd>
+        </div>
+      </dl>
+    </div>
   </div>
 </main>
