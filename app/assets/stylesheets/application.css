@@ -364,3 +364,89 @@ a:hover {
   0%, 100% { opacity: 1; transform: scale(1); }
   50%       { opacity: 0.4; transform: scale(0.75); }
 }
+
+/* ============================================================
+   Form shared components (used by apps/new and other forms)
+   ============================================================ */
+
+.form-field {
+  margin-bottom: var(--space-6);
+}
+
+.form-label {
+  display: block;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+  margin-bottom: var(--space-2);
+}
+
+.form-hint {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}
+
+.form-error-banner {
+  background: var(--critical-dim);
+  border: 1px solid var(--critical);
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-6);
+}
+
+.form-error-banner ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--critical);
+}
+
+.form-error-banner li + li {
+  margin-top: var(--space-1);
+}
+
+.field-error-message {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--critical);
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}
+
+.form-field-error .input {
+  border-color: var(--critical);
+}
+
+.field-error-input {
+  border-color: var(--critical);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+/* ============================================================
+   Apps — new app form
+   ============================================================ */
+
+.app-form-card {
+  max-width: 560px;
+}
+
+.app-form-subheading {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin-top: var(--space-2);
+  margin-bottom: 0;
+}

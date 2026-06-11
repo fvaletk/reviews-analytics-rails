@@ -4,6 +4,8 @@ class App < ApplicationRecord
   belongs_to :workspace
   belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id
 
+  attr_accessor :app_store_url, :play_store_url
+
   validates :name, presence: true
   validates :workspace, presence: true
   validates :created_by, presence: true
