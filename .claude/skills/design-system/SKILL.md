@@ -196,8 +196,39 @@ Place in the navbar partial:
 
 ---
 
+## No Inline Styles
+
+Never use `style="..."` attributes in ERB views. Always define a CSS class instead.
+
+```erb
+<%# ❌ Wrong — inline styles %>
+<span style="font-family: var(--font-mono); font-size: var(--text-sm); color: var(--text-secondary);">
+  label
+</span>
+
+<%# ✅ Correct — named class %>
+<span class="meta-label">label</span>
+```
+
+```css
+/* Define the class in the relevant stylesheet */
+.meta-label {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+```
+
+The only exception is Tailwind layout utilities (`flex`, `grid`, `items-center`, `gap-4`, etc.) which are utility-first by design. Everything else — colors, fonts, spacing, borders — must be a named class using CSS variables.
+
+Where to put new CSS classes:
+- Component-specific styles → `app/assets/stylesheets/components/<component_name>.css`
+- Page-specific styles → `app/assets/stylesheets/pages/<page_name>.css`
+- Global/shared styles → `app/assets/stylesheets/application.css`
+
 ## Checklist Before Committing Any View
 
+- [ ] No inline `style="..."` attributes — every style is a named CSS class
 - [ ] No hardcoded hex colors — only `var(--...)` tokens
 - [ ] Correct font variable used for each text role
 - [ ] Spacing uses `var(--space-N)` tokens

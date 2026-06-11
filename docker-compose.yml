@@ -3,6 +3,9 @@ services:
     build: .
     ports:
       - "3000:3000"
+    volumes:
+      - .:/rails
+      - bundle_cache:/usr/local/bundle
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -25,6 +28,9 @@ services:
   sidekiq:
     build: .
     command: bundle exec sidekiq
+    volumes:
+      - .:/rails
+      - bundle_cache:/usr/local/bundle
     environment:
       DATABASE_URL: ${DATABASE_URL}
       REDIS_URL: ${REDIS_URL}
@@ -40,3 +46,5 @@ services:
 
 volumes:
   postgres_data:
+  bundle_cache:
+  

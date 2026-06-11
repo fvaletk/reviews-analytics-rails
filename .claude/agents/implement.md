@@ -25,6 +25,8 @@ Implement exactly what the ticket's acceptance criteria describe. Nothing more, 
 3. Identify which skills apply to this ticket (the relevant ones are already preloaded)
 4. Run `find . -type f -name "*.rb" | head -40` to orient yourself in the codebase
 5. Read any existing files you will modify before touching them
+6. Never use `docker compose cp` — the project directory is volume-mounted at `/rails`
+  inside the container. Write files locally, execute commands via `docker compose exec web`.
 
 ## Implementation Rules
 
@@ -34,6 +36,15 @@ Implement exactly what the ticket's acceptance criteria describe. Nothing more, 
 - Load `turbo-patterns` skill mentally if the ticket involves views or ActionCable
 - Load `pundit-patterns` skill mentally if the ticket involves authorization
 - Load `design-system` skill mentally if the ticket involves any UI or views
+
+## CSS and Styling Rules
+
+- **Never use inline `style="..."` attributes in ERB views** — always define a named CSS class
+- Place new CSS classes in `app/assets/stylesheets/components/<name>.css` or `pages/<name>.css`
+- All CSS values must use design tokens from `DESIGN.md` — never hardcode colors, fonts, or spacing
+- Tailwind layout utilities (`flex`, `grid`, `items-center`, `gap-N`) are allowed
+- Tailwind color, font, and spacing utilities are not allowed — use CSS variables instead
+- Load the `design-system` skill for any ticket that involves views or UI
 
 ## Rails 8 Specifics
 

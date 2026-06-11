@@ -51,8 +51,12 @@ bin/rails db:create db:migrate db:seed
 
 ## Running Commands
 
-All commands must be run inside the Docker container, never on the host machine.
-Use `docker compose exec web <command>` for all Rails, Rake, and RSpec commands.
+All commands must be run inside the Docker container via `docker compose exec web <command>`.
+The local project directory is mounted into the container at `/rails` — any file written
+locally is immediately available inside the container.
+
+**Never use `docker compose cp` to copy files into the container. It is never needed.**
+Write files to the local filesystem, execute commands via `docker compose exec web`.
 
 ```bash
 # Correct
