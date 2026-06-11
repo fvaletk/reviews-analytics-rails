@@ -5,5 +5,6 @@ class DashboardController < ApplicationController
 
   def index
     skip_authorization
+    @workspaces = policy_scope(Workspace).includes(:workspace_memberships).order(:name)
   end
 end
