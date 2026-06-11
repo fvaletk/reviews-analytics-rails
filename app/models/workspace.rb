@@ -4,6 +4,7 @@ class Workspace < ApplicationRecord
   has_many :workspace_memberships, dependent: :destroy
   has_many :users, through: :workspace_memberships
   has_many :pending_invitations, dependent: :destroy
+  has_many :apps, dependent: :destroy
 
   validates :name, presence: true
   validates :slug, presence: true, uniqueness: true
