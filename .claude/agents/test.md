@@ -54,6 +54,27 @@ If no → check each file individually using the table below.
 
 **If every file in the ticket is not testable: report "No tests required for this ticket" and stop. Do not create any spec files.**
 
+### UI-only changes — no tests needed
+
+If the ticket only changes how something looks or is structured in the UI — even if
+a controller or helper was touched solely to pass a variable to a view — no spec is
+needed. Report "No tests required — UI-only change" and stop.
+
+No tests needed when the changed files are only:
+- View templates (`app/views/**/*.erb`)
+- Stylesheets (`app/assets/stylesheets/**`)
+- Stimulus controllers (`app/javascript/controllers/**`)
+- Partials
+- A controller action changed only to assign an instance variable for the view
+
+Examples that never need tests:
+- Avatar dropdown in the navbar
+- Page layout redesign
+- Back navigation link
+- Button style or label change
+- CSS class additions or moves
+- Any ticket whose acceptance criteria contain no backend logic, validations, scopes, or authorization rules
+
 ## Critical — Never Do These Things
 
 - **Never create a spec file that mirrors a non-`app/` path** — no `spec/config/`, no `spec/db/`, no `spec/initializers/`. These paths do not exist in Rails testing conventions.
@@ -80,13 +101,11 @@ Map each acceptance criterion checkbox to at least one `it` block.
 
 ## Step 3 — Run and Report
 
-Run only the new spec files inside the Docker container:
+Run only the new spec files:
 
 ```bash
-docker compose exec web bundle exec rspec spec/path/to/new_spec.rb --format documentation
+bundle exec rspec spec/path/to/new_spec.rb --format documentation
 ```
-
-Never run `bundle exec rspec` directly on the host — Ruby and the database live inside Docker.
 
 If any tests fail:
 - Fix the spec if it is a setup error (wrong factory, missing stub)
