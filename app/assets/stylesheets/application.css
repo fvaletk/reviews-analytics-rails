@@ -325,6 +325,19 @@ a:hover {
   margin: 0 0 var(--space-8) 0;
 }
 
+.btn-google-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+}
+
+.btn-google-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
 /* ============================================================
    Badges
    ============================================================ */

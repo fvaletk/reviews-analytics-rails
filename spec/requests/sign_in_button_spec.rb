@@ -55,4 +55,24 @@ RSpec.describe "GET /sign_in — Google OAuth button", type: :request do
     form = doc.css("form[action='#{user_google_oauth2_omniauth_authorize_path}']").first
     expect(form.text).to include("Sign in with Google")
   end
+
+  # BRA-45: Google logo renders as an inline icon (18×18px enforced via CSS class)
+  it "the Google logo img has class 'btn-google-icon'" do
+    form = doc.css("form[action='#{user_google_oauth2_omniauth_authorize_path}']").first
+    img = form.css("img.btn-google-icon").first
+    expect(img).not_to be_nil
+  end
+
+  # BRA-45: Logo and text are horizontally aligned via flex wrapper
+  it "the Google logo img is wrapped in a span with class 'btn-google-content'" do
+    form = doc.css("form[action='#{user_google_oauth2_omniauth_authorize_path}']").first
+    wrapper = form.css("span.btn-google-content").first
+    expect(wrapper).not_to be_nil
+  end
+
+  it "the btn-google-content span contains the Google logo img" do
+    form = doc.css("form[action='#{user_google_oauth2_omniauth_authorize_path}']").first
+    img_inside_wrapper = form.css("span.btn-google-content img.btn-google-icon").first
+    expect(img_inside_wrapper).not_to be_nil
+  end
 end
