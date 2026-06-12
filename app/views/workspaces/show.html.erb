@@ -1,39 +1,5 @@
 <% content_for :title, "#{@workspace.name} — Reviews Analytics" %>
 
-<nav style="
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border-default);
-  padding: var(--space-4) var(--space-6);
-">
-  <div style="
-    max-width: 1100px;
-    margin: 0 auto;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  ">
-    <span style="
-      font-family: var(--font-body);
-      font-size: var(--text-sm);
-      font-weight: 600;
-      color: var(--text-primary);
-      letter-spacing: var(--tracking-tight);
-    ">
-      <%= @workspace.name %>
-    </span>
-
-    <%= link_to "Sign out", sign_out_path,
-          data: { turbo_method: :delete },
-          style: "
-            font-family: var(--font-body);
-            font-size: var(--text-sm);
-            font-weight: 500;
-            color: var(--text-secondary);
-            text-decoration: none;
-          " %>
-  </div>
-</nav>
-
 <main class="page-container">
   <header class="page-header">
     <div class="flex" style="align-items: center; justify-content: space-between;">

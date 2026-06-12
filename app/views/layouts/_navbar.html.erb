@@ -1,0 +1,36 @@
+<nav class="navbar">
+  <div class="navbar-inner">
+    <%= link_to "Reviews Analytics", root_path, class: "navbar-logo" %>
+
+    <div class="avatar-dropdown" data-controller="avatar-dropdown">
+      <button class="avatar-trigger"
+              data-action="click->avatar-dropdown#toggle"
+              aria-label="Open user menu"
+              type="button">
+        <% if current_user.avatar_url.present? %>
+          <img src="<%= current_user.avatar_url %>"
+               alt="<%= current_user.name %>"
+               class="avatar-photo">
+        <% else %>
+          <span class="avatar-initials"><%= current_user.name&.first || current_user.email.first %></span>
+        <% end %>
+      </button>
+
+      <div class="avatar-menu">
+        <div class="avatar-menu-header">
+          <p class="avatar-menu-name"><%= current_user.name %></p>
+          <p class="avatar-menu-email"><%= current_user.email %></p>
+        </div>
+
+        <hr class="avatar-menu-divider">
+
+        <div class="avatar-menu-actions">
+          <%= link_to "Sign out",
+                sign_out_path,
+                data: { turbo_method: :delete },
+                class: "avatar-menu-sign-out" %>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
