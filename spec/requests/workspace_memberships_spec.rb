@@ -311,5 +311,33 @@ RSpec.describe "WorkspaceMemberships", type: :request do
         }.not_to change(WorkspaceMembership, :count)
       end
     end
+
+    # -----------------------------------------------------------------------
+    # Case 5: current user attempts to remove themselves via direct URL
+    # -----------------------------------------------------------------------
+    context "when current user attempts to remove their own membership via direct URL" do
+      let(:current_super_admin) { user_with_role(:super_admin) }
+      let!(:own_membership) do
+        WorkspaceMembership.find_by!(user: current_super_admin, workspace: workspace)
+      end
+
+      before { sign_in current_super_admin }
+
+      it "does not destroy their own membership" do
+        expect {
+          delete workspace_membership_path(workspace, own_membership)
+        }.not_to change(WorkspaceMembership, :count)
+      end
+
+      it "redirects to the new membership path" do
+        delete workspace_membership_path(workspace, own_membership)
+        expect(response).to redirect_to(new_workspace_membership_path(workspace))
+      end
+
+      it "sets an alert message" do
+        delete workspace_membership_path(workspace, own_membership)
+        expect(flash[:alert]).to eq("Cannot remove the sole super admin.")
+      end
+    end
   end
 end

@@ -106,7 +106,7 @@
                   <%= m.role %>
                 </span>
 
-                <% if policy(@workspace).invite? %>
+                <% if policy(@workspace).invite? && m.user != current_user %>
                   <%= button_to "REMOVE",
                         workspace_membership_path(@workspace, m),
                         method: :delete,

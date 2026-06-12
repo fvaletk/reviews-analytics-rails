@@ -157,6 +157,35 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
+    # BRA-49: Remove button visibility for current user's own row
+    context "when signed in as super_admin — Remove button visibility" do
+      let(:super_admin_user) { member_with_role(:super_admin) }
+      let!(:other_member) do
+        create(:workspace_membership, workspace: workspace, role: :collaborator)
+      end
+
+      before { sign_in super_admin_user }
+
+      it "does not render a Remove form targeting the current user's own membership" do
+        get workspace_path(workspace)
+        own_membership = WorkspaceMembership.find_by!(user: super_admin_user, workspace: workspace)
+        own_path = workspace_membership_path(workspace, own_membership)
+        # button_to generates: <form ... action="OWN_PATH"><input name="_method" value="delete">...REMOVE
+        expect(response.body).not_to include(%( action="#{own_path}"))
+      end
+
+      it "renders a Remove form targeting the other member's membership" do
+        get workspace_path(workspace)
+        other_path = workspace_membership_path(workspace, other_member)
+        expect(response.body).to include(%( action="#{other_path}"))
+      end
+
+      it "renders the Remove button text exactly once (for other member only)" do
+        get workspace_path(workspace)
+        expect(response.body.scan(">REMOVE<").count).to eq(1)
+      end
+    end
+
     context "when signed in as collaborator (non-admin)" do
       before { sign_in member_with_role(:collaborator) }
 
