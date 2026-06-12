@@ -171,6 +171,26 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
+    # BRA-48: back navigation link
+    context "back navigation — signed in as collaborator" do
+      before { sign_in member_with_role(:collaborator) }
+
+      it "renders the back navigation link text" do
+        get workspace_path(workspace)
+        expect(response.body).to include("← Dashboard")
+      end
+
+      it "links the back navigation to root_path" do
+        get workspace_path(workspace)
+        expect(response.body).to include(%(<a class="back-nav-link" href="#{root_path}"))
+      end
+
+      it "renders the back link with the back-nav-link CSS class" do
+        get workspace_path(workspace)
+        expect(response.body).to include('class="back-nav-link"')
+      end
+    end
+
     context "when signed in as admin (non-super_admin)" do
       before { sign_in member_with_role(:admin) }
 

@@ -1,0 +1,17 @@
+/* ============================================================
+   Back navigation link
+   ============================================================ */
+
+.back-nav-link {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  text-decoration: none;
+  display: inline-block;
+  margin-bottom: var(--space-4);
+  transition: color var(--transition-base);
+}
+
+.back-nav-link:hover {
+  color: var(--text-primary);
+}

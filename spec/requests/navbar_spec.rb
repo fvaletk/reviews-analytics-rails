@@ -120,6 +120,31 @@ RSpec.describe "Navbar", type: :request do
     end
   end
 
+  # BRA-48: navbar logo links to root_path on all authenticated pages
+  describe "navbar logo href" do
+    let(:user) { create(:user) }
+
+    before { sign_in user }
+
+    it "links the navbar logo to root_path on the dashboard" do
+      get root_path
+      expect(response.body).to include(%(<a class="navbar-logo" href="#{root_path}"))
+    end
+
+    context "on the workspace show page" do
+      let(:workspace) { create(:workspace) }
+
+      before do
+        create(:workspace_membership, user: user, workspace: workspace, role: :collaborator)
+      end
+
+      it "links the navbar logo to root_path" do
+        get workspace_path(workspace)
+        expect(response.body).to include(%(<a class="navbar-logo" href="#{root_path}"))
+      end
+    end
+  end
+
   # AC: navbar is also present on workspace show page
   describe "navbar on workspace show page" do
     let(:user) { create(:user, avatar_url: "https://example.com/photo.jpg") }

@@ -2,6 +2,7 @@
 
 <main class="page-container">
   <header class="page-header">
+    <%= link_to "← Dashboard", root_path, class: "back-nav-link" %>
     <div class="flex" style="align-items: center; justify-content: space-between;">
       <h1 class="page-title"><%= @workspace.name %></h1>
       <% if policy(@workspace).invite? %>
