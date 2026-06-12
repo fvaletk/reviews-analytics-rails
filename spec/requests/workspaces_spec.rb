@@ -249,5 +249,71 @@ RSpec.describe "Workspaces", type: :request do
         expect(response).to redirect_to(sign_in_path)
       end
     end
+
+    # BRA-50: Two-column layout redesign — HTML structure assertions
+    context "BRA-50 — two-column layout and members sidebar structure" do
+      let(:member_user) do
+        u = create(:user, name: "Alice Tester", email: "alice@example.com")
+        create(:workspace_membership, user: u, workspace: workspace, role: :collaborator)
+        u
+      end
+
+      before { sign_in member_user }
+
+      it "renders the workspace-layout wrapper element" do
+        get workspace_path(workspace)
+        expect(response.body).to include('class="workspace-layout"')
+      end
+
+      it "renders the workspace-apps-card element" do
+        get workspace_path(workspace)
+        expect(response.body).to include("workspace-apps-card")
+      end
+
+      it "renders the workspace-members-card element" do
+        get workspace_path(workspace)
+        expect(response.body).to include("workspace-members-card")
+      end
+
+      it "renders at least one avatar-initial element" do
+        get workspace_path(workspace)
+        expect(response.body).to include("avatar-initial")
+      end
+
+      it "renders the avatar initial as the first letter of the member's name" do
+        get workspace_path(workspace)
+        expect(response.body).to include(">A<")
+      end
+
+      it "renders the badge-role element for each member" do
+        get workspace_path(workspace)
+        expect(response.body).to include("badge-role")
+      end
+
+      it "renders the workspace-member-item element for each member" do
+        get workspace_path(workspace)
+        expect(response.body).to include("workspace-member-item")
+      end
+
+      it "renders the member email in the sidebar" do
+        get workspace_path(workspace)
+        expect(response.body).to include("alice@example.com")
+      end
+
+      it "renders the member name in the sidebar" do
+        get workspace_path(workspace)
+        expect(response.body).to include("Alice Tester")
+      end
+
+      it "does not include any inline style attributes in the page body" do
+        get workspace_path(workspace)
+        expect(response.body).not_to match(/\bstyle="[^"]*"/)
+      end
+
+      it "renders the html element with data-theme=dark" do
+        get workspace_path(workspace)
+        expect(response.body).to include('data-theme="dark"')
+      end
+    end
   end
 end

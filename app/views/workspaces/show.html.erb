@@ -3,139 +3,93 @@
 <main class="page-container">
   <header class="page-header">
     <%= link_to "← Dashboard", root_path, class: "back-nav-link" %>
-    <div class="flex" style="align-items: center; justify-content: space-between;">
-      <h1 class="page-title"><%= @workspace.name %></h1>
-      <% if policy(@workspace).invite? %>
-        <%= link_to "INVITE MEMBER",
-              new_workspace_membership_path(@workspace),
-              class: "btn-primary" %>
-      <% end %>
-    </div>
+    <h1 class="page-title"><%= @workspace.name %></h1>
   </header>
 
-  <div class="page-body">
-    <div class="card workspace-apps-card">
-      <div class="flex items-center workspace-apps-header">
-        <h2 class="card-title workspace-apps-title">Apps</h2>
-        <% if policy(@workspace).create_app? %>
-          <%= link_to "ADD APP", new_workspace_app_path(@workspace), class: "btn-primary" %>
+  <div class="workspace-layout">
+    <%# Left column — Apps (65%) %>
+    <div class="workspace-apps-column">
+      <div class="card workspace-apps-card">
+        <div class="flex items-center workspace-apps-header">
+          <h2 class="card-title workspace-apps-title">Apps</h2>
+          <% if policy(@workspace).create_app? %>
+            <%= link_to "ADD APP", new_workspace_app_path(@workspace), class: "btn-primary" %>
+          <% end %>
+        </div>
+
+        <% apps = @workspace.apps.includes(:created_by).order(:name) %>
+        <% if apps.any? %>
+          <ul class="workspace-app-list">
+            <% apps.each do |app| %>
+              <li class="workspace-app-item">
+                <%= link_to workspace_app_path(@workspace, app), class: "workspace-app-link" do %>
+                  <span class="workspace-app-name"><%= app.name %></span>
+                  <span class="workspace-app-stores">
+                    <% if app.app_store_id.present? %>
+                      <span class="workspace-app-store-tag">App Store</span>
+                    <% end %>
+                    <% if app.play_store_id.present? %>
+                      <span class="workspace-app-store-tag">Play Store</span>
+                    <% end %>
+                  </span>
+                <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% else %>
+          <p class="workspace-apps-empty">No apps yet.</p>
         <% end %>
       </div>
-
-      <% apps = @workspace.apps.includes(:created_by).order(:name) %>
-      <% if apps.any? %>
-        <ul class="workspace-app-list">
-          <% apps.each do |app| %>
-            <li class="workspace-app-item">
-              <%= link_to workspace_app_path(@workspace, app), class: "workspace-app-link" do %>
-                <span class="workspace-app-name"><%= app.name %></span>
-                <span class="workspace-app-stores">
-                  <% if app.app_store_id.present? %>
-                    <span class="workspace-app-store-tag">App Store</span>
-                  <% end %>
-                  <% if app.play_store_id.present? %>
-                    <span class="workspace-app-store-tag">Play Store</span>
-                  <% end %>
-                </span>
-              <% end %>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p class="workspace-apps-empty">No apps yet.</p>
-      <% end %>
     </div>
 
-    <div class="card">
-      <h2 class="card-title">Members</h2>
+    <%# Right column — Members (35%) %>
+    <div class="workspace-members-column">
+      <div class="card workspace-members-card">
+        <div class="workspace-members-header">
+          <h2 class="card-title workspace-members-title">Members</h2>
+        </div>
 
-      <% members = @workspace.workspace_memberships.includes(:user).order(:role) %>
-      <% if members.any? %>
-        <ul style="list-style: none; margin: 0; padding: 0;">
-          <% members.each do |m| %>
-            <li style="
-              display: flex;
-              align-items: center;
-              justify-content: space-between;
-              padding: var(--space-3) 0;
-              border-bottom: 1px solid var(--border-subtle);
-            ">
-              <div>
-                <span style="
-                  font-family: var(--font-body);
-                  font-size: var(--text-sm);
-                  color: var(--text-primary);
-                  font-weight: 500;
-                ">
-                  <%= m.user.name.presence || m.user.email %>
-                </span>
-                <span style="
-                  display: block;
-                  font-family: var(--font-mono);
-                  font-size: var(--text-xs);
-                  color: var(--text-muted);
-                ">
-                  <%= m.user.email %>
-                </span>
-              </div>
+        <% members = @workspace.workspace_memberships.includes(:user).order(:role) %>
+        <p class="workspace-member-count"><%= pluralize(members.count, "member") %></p>
 
-              <div class="flex" style="align-items: center; gap: var(--space-6);">
-                <span style="
-                  font-family: var(--font-mono);
-                  font-size: var(--text-xs);
-                  color: var(--text-muted);
-                ">
-                  <% if m.joined_at.present? %>
-                    Joined <%= m.joined_at.strftime("%-d %b %Y") %>
-                  <% else %>
-                    Pending
-                  <% end %>
-                </span>
+        <% if members.any? %>
+          <ul class="workspace-member-list">
+            <% members.each do |m| %>
+              <li class="workspace-member-item">
+                <div class="avatar-initial">
+                  <%= (m.user.name.presence || m.user.email).first.upcase %>
+                </div>
 
-                <span style="
-                  font-family: var(--font-mono);
-                  font-size: var(--text-xs);
-                  color: var(--text-secondary);
-                  text-transform: uppercase;
-                  letter-spacing: var(--tracking-wider);
-                  background: var(--bg-elevated);
-                  border: 1px solid var(--border-subtle);
-                  border-radius: var(--radius-sm);
-                  padding: var(--space-1) var(--space-2);
-                ">
-                  <%= m.role %>
-                </span>
+                <div class="workspace-member-info">
+                  <div class="workspace-member-name-row">
+                    <span class="workspace-member-name">
+                      <%= m.user.name.presence || m.user.email %>
+                    </span>
+                    <span class="badge-role"><%= m.role %></span>
+                  </div>
+                  <span class="workspace-member-email"><%= m.user.email %></span>
+                </div>
 
                 <% if policy(@workspace).invite? && m.user != current_user %>
                   <%= button_to "REMOVE",
                         workspace_membership_path(@workspace, m),
                         method: :delete,
-                        style: "
-                          font-family: var(--font-body);
-                          font-size: var(--text-xs);
-                          font-weight: 600;
-                          letter-spacing: var(--tracking-wider);
-                          text-transform: uppercase;
-                          color: var(--critical);
-                          background: transparent;
-                          border: 1px solid var(--critical);
-                          border-radius: var(--radius-sm);
-                          padding: var(--space-1) var(--space-3);
-                          cursor: pointer;
-                        ",
+                        class: "btn-remove",
                         data: { turbo_confirm: "Remove #{m.user.name.presence || m.user.email} from this workspace?" } %>
                 <% end %>
-              </div>
-            </li>
-          <% end %>
-        </ul>
-      <% else %>
-        <p style="
-          font-family: var(--font-body);
-          font-size: var(--text-sm);
-          color: var(--text-muted);
-        ">No members yet.</p>
-      <% end %>
+              </li>
+            <% end %>
+          </ul>
+        <% end %>
+
+        <% if policy(@workspace).invite? %>
+          <div class="workspace-members-footer">
+            <%= link_to "INVITE MEMBER",
+                  new_workspace_membership_path(@workspace),
+                  class: "btn-primary" %>
+          </div>
+        <% end %>
+      </div>
     </div>
   </div>
 </main>
