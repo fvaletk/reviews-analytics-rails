@@ -1,63 +1,12 @@
 /* ============================================================
-   Workspace show page — two-column layout
+   Workspace show page — single-column layout
    ============================================================ */
 
-.workspace-layout {
-  display: grid;
-  grid-template-columns: 65fr 35fr;
-  gap: var(--space-6);
-  align-items: start;
-}
-
-@media (max-width: 767px) {
-  .workspace-layout {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ============================================================
-   Members sidebar
-   ============================================================ */
-
-.workspace-members-card {
-  position: sticky;
-  top: calc(52px + var(--space-6));
-}
-
-.workspace-members-header {
+.workspace-page-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: var(--space-4);
-}
-
-.workspace-members-title {
-  margin-bottom: 0;
-}
-
-.workspace-member-count {
-  font-family: var(--font-mono);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin: 0 0 var(--space-4) 0;
-}
-
-.workspace-member-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.workspace-member-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  padding: var(--space-3) 0;
-  border-bottom: 1px solid var(--border-default);
-}
-
-.workspace-member-item:last-child {
-  border-bottom: none;
+  gap: var(--space-4);
 }
 
 /* ============================================================
@@ -160,11 +109,78 @@
 }
 
 /* ============================================================
-   Invite member footer
+   Workspaces — apps listing on show page
    ============================================================ */
 
-.workspace-members-footer {
-  margin-top: var(--space-4);
-  padding-top: var(--space-4);
-  border-top: 1px solid var(--border-default);
+.workspace-apps-card {
+  margin-bottom: var(--space-6);
 }
+
+.workspace-apps-header {
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.workspace-apps-title {
+  margin-bottom: 0;
+}
+
+.workspace-app-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.workspace-app-item {
+  border-bottom: 1px solid var(--border-default);
+}
+
+.workspace-app-item:last-child {
+  border-bottom: none;
+}
+
+.workspace-app-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3) 0;
+  text-decoration: none;
+  transition: background var(--transition-base);
+}
+
+.workspace-app-link:hover .workspace-app-name {
+  color: var(--accent-hover);
+}
+
+.workspace-app-name {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--accent);
+  transition: color var(--transition-base);
+}
+
+.workspace-app-stores {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.workspace-app-store-tag {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-wider);
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-sm);
+  padding: var(--space-1) var(--space-2);
+}
+
+.workspace-apps-empty {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  margin: 0;
+}
+

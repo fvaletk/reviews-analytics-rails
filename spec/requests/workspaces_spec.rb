@@ -250,8 +250,8 @@ RSpec.describe "Workspaces", type: :request do
       end
     end
 
-    # BRA-50: Two-column layout redesign — HTML structure assertions
-    context "BRA-50 — two-column layout and members sidebar structure" do
+    # BRA-51: Members list moved to modal — HTML structure assertions
+    context "BRA-51 — modal layout for members" do
       let(:member_user) do
         u = create(:user, name: "Alice Tester", email: "alice@example.com")
         create(:workspace_membership, user: u, workspace: workspace, role: :collaborator)
@@ -260,9 +260,9 @@ RSpec.describe "Workspaces", type: :request do
 
       before { sign_in member_user }
 
-      it "renders the workspace-layout wrapper element" do
+      it "renders the page-container wrapper element" do
         get workspace_path(workspace)
-        expect(response.body).to include('class="workspace-layout"')
+        expect(response.body).to include('class="page-container"')
       end
 
       it "renders the workspace-apps-card element" do
@@ -270,9 +270,9 @@ RSpec.describe "Workspaces", type: :request do
         expect(response.body).to include("workspace-apps-card")
       end
 
-      it "renders the workspace-members-card element" do
+      it "renders the members modal trigger button" do
         get workspace_path(workspace)
-        expect(response.body).to include("workspace-members-card")
+        expect(response.body).to include('class="members-trigger"')
       end
 
       it "renders at least one avatar-initial element" do
@@ -290,17 +290,17 @@ RSpec.describe "Workspaces", type: :request do
         expect(response.body).to include("badge-role")
       end
 
-      it "renders the workspace-member-item element for each member" do
+      it "renders the modal-member-item element for each member" do
         get workspace_path(workspace)
-        expect(response.body).to include("workspace-member-item")
+        expect(response.body).to include("modal-member-item")
       end
 
-      it "renders the member email in the sidebar" do
+      it "renders the member email in the modal" do
         get workspace_path(workspace)
         expect(response.body).to include("alice@example.com")
       end
 
-      it "renders the member name in the sidebar" do
+      it "renders the member name in the modal" do
         get workspace_path(workspace)
         expect(response.body).to include("Alice Tester")
       end

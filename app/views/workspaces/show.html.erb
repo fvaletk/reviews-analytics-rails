@@ -1,61 +1,75 @@
 <% content_for :title, "#{@workspace.name} — Reviews Analytics" %>
 
-<main class="page-container">
-  <header class="page-header">
-    <%= link_to "← Dashboard", root_path, class: "back-nav-link" %>
-    <h1 class="page-title"><%= @workspace.name %></h1>
-  </header>
+<% members = @workspace.workspace_memberships.includes(:user).order(:role) %>
 
-  <div class="workspace-layout">
-    <%# Left column — Apps (65%) %>
-    <div class="workspace-apps-column">
-      <div class="card workspace-apps-card">
-        <div class="flex items-center workspace-apps-header">
-          <h2 class="card-title workspace-apps-title">Apps</h2>
-          <% if policy(@workspace).create_app? %>
-            <%= link_to "ADD APP", new_workspace_app_path(@workspace), class: "btn-primary" %>
-          <% end %>
-        </div>
+<div data-controller="modal">
+  <main class="page-container">
+    <header class="page-header workspace-page-header">
+      <div>
+        <%= link_to "← Dashboard", root_path, class: "back-nav-link" %>
+        <h1 class="page-title"><%= @workspace.name %></h1>
+      </div>
+      <button class="members-trigger"
+              data-action="click->modal#open">
+        Members (<%= members.count %>)
+      </button>
+    </header>
 
-        <% apps = @workspace.apps.includes(:created_by).order(:name) %>
-        <% if apps.any? %>
-          <ul class="workspace-app-list">
-            <% apps.each do |app| %>
-              <li class="workspace-app-item">
-                <%= link_to workspace_app_path(@workspace, app), class: "workspace-app-link" do %>
-                  <span class="workspace-app-name"><%= app.name %></span>
-                  <span class="workspace-app-stores">
-                    <% if app.app_store_id.present? %>
-                      <span class="workspace-app-store-tag">App Store</span>
-                    <% end %>
-                    <% if app.play_store_id.present? %>
-                      <span class="workspace-app-store-tag">Play Store</span>
-                    <% end %>
-                  </span>
-                <% end %>
-              </li>
-            <% end %>
-          </ul>
-        <% else %>
-          <p class="workspace-apps-empty">No apps yet.</p>
+    <div class="card workspace-apps-card">
+      <div class="flex items-center workspace-apps-header">
+        <h2 class="card-title workspace-apps-title">Apps</h2>
+        <% if policy(@workspace).create_app? %>
+          <%= link_to "ADD APP", new_workspace_app_path(@workspace), class: "btn-primary" %>
         <% end %>
       </div>
+
+      <% apps = @workspace.apps.includes(:created_by).order(:name) %>
+      <% if apps.any? %>
+        <ul class="workspace-app-list">
+          <% apps.each do |app| %>
+            <li class="workspace-app-item">
+              <%= link_to workspace_app_path(@workspace, app), class: "workspace-app-link" do %>
+                <span class="workspace-app-name"><%= app.name %></span>
+                <span class="workspace-app-stores">
+                  <% if app.app_store_id.present? %>
+                    <span class="workspace-app-store-tag">App Store</span>
+                  <% end %>
+                  <% if app.play_store_id.present? %>
+                    <span class="workspace-app-store-tag">Play Store</span>
+                  <% end %>
+                </span>
+              <% end %>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="workspace-apps-empty">No apps yet.</p>
+      <% end %>
     </div>
+  </main>
 
-    <%# Right column — Members (35%) %>
-    <div class="workspace-members-column">
-      <div class="card workspace-members-card">
-        <div class="workspace-members-header">
-          <h2 class="card-title workspace-members-title">Members</h2>
-        </div>
+  <%# Members modal %>
+  <div class="modal-backdrop"
+       data-modal-target="dialog"
+       aria-hidden="true"
+       data-action="click->modal#backdropClick">
+    <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="members-modal-title">
+      <div class="modal-header">
+        <h2 class="modal-title" id="members-modal-title">
+          Members (<%= members.count %>)
+        </h2>
+        <button class="modal-close"
+                aria-label="Close members"
+                data-action="click->modal#close">
+          &times;
+        </button>
+      </div>
 
-        <% members = @workspace.workspace_memberships.includes(:user).order(:role) %>
-        <p class="workspace-member-count"><%= pluralize(members.count, "member") %></p>
-
+      <div class="modal-body">
         <% if members.any? %>
-          <ul class="workspace-member-list">
+          <ul class="modal-member-list">
             <% members.each do |m| %>
-              <li class="workspace-member-item">
+              <li class="modal-member-item">
                 <div class="avatar-initial">
                   <%= (m.user.name.presence || m.user.email).first.upcase %>
                 </div>
@@ -81,15 +95,15 @@
             <% end %>
           </ul>
         <% end %>
-
-        <% if policy(@workspace).invite? %>
-          <div class="workspace-members-footer">
-            <%= link_to "INVITE MEMBER",
-                  new_workspace_membership_path(@workspace),
-                  class: "btn-primary" %>
-          </div>
-        <% end %>
       </div>
+
+      <% if policy(@workspace).invite? %>
+        <div class="modal-footer">
+          <%= link_to "INVITE MEMBER",
+                new_workspace_membership_path(@workspace),
+                class: "btn-primary" %>
+        </div>
+      <% end %>
     </div>
   </div>
-</main>
+</div>
