@@ -87,6 +87,15 @@ development:
 - Every env var documented in `.env.example`
 - Access pattern: `ENV.fetch('KEY')` in initializers, `ENV['KEY']` elsewhere
 
+## Asset Pipeline
+
+- Never run `rails assets:precompile` in development — Propshaft serves source
+  files directly from `app/assets/` and picks up changes on every request
+- `public/assets/` must be empty in development — if it exists, precompiled files
+  take priority over live source files and CSS changes will not reflect on reload
+- If `public/assets/` appears, delete it: `docker compose exec web rm -rf public/assets`
+- `public/assets/` is gitignored — never commit precompiled assets
+
 ## General Rules
 
 - No logic in views beyond `if/unless` and iteration
