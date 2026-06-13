@@ -719,6 +719,14 @@ a:hover {
   line-height: 1;
 }
 
+.avatar-initials--hidden {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
 .avatar-menu {
   display: none;
   position: absolute;
