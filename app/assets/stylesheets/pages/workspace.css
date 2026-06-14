@@ -9,6 +9,13 @@
   gap: var(--space-4);
 }
 
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-6);
+}
+
 /* ============================================================
    Avatar initial circle
    ============================================================ */

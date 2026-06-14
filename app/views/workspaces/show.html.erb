@@ -7,7 +7,6 @@
     <header class="page-header workspace-page-header">
       <div>
         <%= link_to "← Dashboard", root_path, class: "back-nav-link" %>
-        <h1 class="page-title"><%= @workspace.name %></h1>
       </div>
       <button class="members-trigger"
               data-action="click->modal#open">
@@ -15,14 +14,14 @@
       </button>
     </header>
 
-    <div class="card workspace-apps-card">
-      <div class="flex items-center workspace-apps-header">
-        <h2 class="card-title workspace-apps-title">Apps</h2>
-        <% if policy(@workspace).create_app? %>
-          <%= link_to "ADD APP", new_workspace_app_path(@workspace), class: "btn-primary" %>
-        <% end %>
-      </div>
+    <div class="section-header">
+      <h1 class="page-title"><%= @workspace.name %></h1>
+      <% if policy(@workspace).create_app? %>
+        <%= link_to "+ Add App", new_workspace_app_path(@workspace), class: "btn-secondary" %>
+      <% end %>
+    </div>
 
+    <div class="card workspace-apps-card">
       <% apps = @workspace.apps.includes(:created_by).order(:name) %>
       <% if apps.any? %>
         <ul class="workspace-app-list">
