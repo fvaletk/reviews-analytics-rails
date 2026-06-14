@@ -5,24 +5,11 @@
     <h1 class="page-title">Create a Workspace</h1>
   </header>
 
-  <div class="page-body">
-    <div class="card" style="max-width: 480px;">
+  <div class="new-workspace-body">
+    <div class="card new-workspace-card">
       <% if @workspace.errors.any? %>
-        <div style="
-          background: var(--critical-dim);
-          border: 1px solid var(--critical);
-          border-radius: var(--radius-md);
-          padding: var(--space-3) var(--space-4);
-          margin-bottom: var(--space-6);
-        ">
-          <ul style="
-            list-style: none;
-            margin: 0;
-            padding: 0;
-            font-family: var(--font-body);
-            font-size: var(--text-sm);
-            color: var(--critical);
-          ">
+        <div class="form-error-banner">
+          <ul>
             <% @workspace.errors.full_messages.each do |message| %>
               <li><%= message %></li>
             <% end %>
@@ -31,25 +18,16 @@
       <% end %>
 
       <%= form_with model: @workspace, url: workspaces_path, method: :post do |f| %>
-        <div style="margin-bottom: var(--space-6);">
-          <%= f.label :name, "Workspace Name",
-                style: "
-                  display: block;
-                  font-family: var(--font-body);
-                  font-size: var(--text-sm);
-                  font-weight: 600;
-                  color: var(--text-secondary);
-                  letter-spacing: var(--tracking-wider);
-                  text-transform: uppercase;
-                  margin-bottom: var(--space-2);
-                " %>
+        <div class="form-field">
+          <%= f.label :name, "Workspace Name", class: "form-label" %>
           <%= f.text_field :name,
-                placeholder: "e.g. Acme Corp",
+                placeholder: "e.g. Acme Corp, My Startup...",
                 class: "input",
                 autofocus: true %>
         </div>
 
-        <div class="flex" style="justify-content: flex-end;">
+        <div class="form-actions">
+          <%= link_to "CANCEL", root_path, class: "btn-ghost" %>
           <%= f.submit "CREATE WORKSPACE", class: "btn-primary" %>
         </div>
       <% end %>
