@@ -459,22 +459,6 @@ a:hover {
 }
 
 /* ============================================================
-   Apps — new app form
-   ============================================================ */
-
-.app-form-card {
-  max-width: 560px;
-}
-
-.app-form-subheading {
-  font-family: var(--font-body);
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
-  margin-top: var(--space-2);
-  margin-bottom: 0;
-}
-
-/* ============================================================
    Apps — show page
    ============================================================ */
 
