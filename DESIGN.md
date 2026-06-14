@@ -312,23 +312,64 @@ A subtle animated dot for live job status.
 
 ### Form Inputs
 
+Always use the `.form-input` class — never raw Tailwind utilities on input elements.
+Tailwind JIT does not reliably scan ERB files, so utility classes on inputs will not render.
+
+All form classes live in `app/assets/stylesheets/components/forms.css`:
+
 ```css
-.input {
-  background: var(--bg-subtle);
-  border: 1px solid var(--border-default);
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
   border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-subtle);
   color: var(--text-primary);
   font-family: var(--font-body);
   font-size: var(--text-base);
   padding: var(--space-3) var(--space-4);
   transition: border-color 150ms ease;
-  width: 100%;
 }
-.input:focus {
+.form-input:focus {
   outline: none;
   border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
 }
-.input::placeholder { color: var(--text-tertiary); }
+.form-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-hint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+```
+
+Usage in ERB:
+```erb
+<div class="form-field">
+  <%= f.label :name, "Workspace Name", class: "form-label" %>
+  <%= f.text_field :name,
+        placeholder: "e.g. Acme Corp, My Startup...",
+        class: "form-input" %>
+  <p class="form-hint">Optional helper text here.</p>
+</div>
 ```
 
 ### Notification Bell Badge

@@ -100,6 +100,74 @@ Every page follows this shell:
 
 ---
 
+## Building a Form Input
+
+Always use the `.form-input` class for all text inputs, never raw Tailwind utility
+classes on input elements — Tailwind JIT may not scan ERB files reliably.
+
+```erb
+<div class="form-field">
+  <%= f.label :name, "Field Label", class: "form-label" %>
+  <%= f.text_field :name,
+        placeholder: "Placeholder text...",
+        class: "form-input" %>
+</div>
+```
+
+The classes are defined in `app/assets/stylesheets/components/forms.css`:
+
+```css
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.form-label {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--text-secondary);
+  letter-spacing: var(--tracking-wider);
+  text-transform: uppercase;
+}
+
+.form-input {
+  display: block;
+  width: 100%;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-strong);
+  background: var(--bg-subtle);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  padding: var(--space-3) var(--space-4);
+  transition: border-color 150ms ease;
+}
+.form-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+.form-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.form-hint {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--text-tertiary);
+}
+```
+
+Use `.form-hint` for helper text below a field:
+```erb
+<p class="form-hint">The store ID is parsed automatically from the URL.</p>
+```
+
+**Never** apply Tailwind color, font, or spacing utilities directly on `<input>`
+elements — use `.form-input` and the classes above exclusively.
+
 ## Building a Card
 
 ```erb
