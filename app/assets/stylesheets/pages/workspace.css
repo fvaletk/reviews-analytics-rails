@@ -1,18 +1,4 @@
 /* ============================================================
-   Workspace new page — centered form layout
-   ============================================================ */
-
-.new-workspace-body {
-  display: flex;
-  justify-content: center;
-}
-
-.new-workspace-card {
-  width: 100%;
-  max-width: 480px;
-}
-
-/* ============================================================
    Workspace show page — single-column layout
    ============================================================ */
 
