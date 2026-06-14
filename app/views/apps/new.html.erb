@@ -17,48 +17,36 @@
       </div>
     <% end %>
 
-    <%= form_with model: [@workspace, @app], url: workspace_apps_path(@workspace), method: :post do |f| %>
+    <div class="card">
+      <%= form_with model: [@workspace, @app] do |f| %>
+        <div class="form-field">
+          <%= f.label :name, "App Name", class: "form-label" %>
+          <%= f.text_field :name,
+                placeholder: "e.g. Spotify, Notion, My App...",
+                class: "form-input" %>
+        </div>
 
-      <div class="form-field">
-        <%= f.label :name, "App Name", class: "form-label" %>
-        <%= f.text_field :name,
-              placeholder: "e.g. Spotify, Notion, My App...",
-              class: ["form-input", ("form-field-error" if @app.errors[:name].any?)].compact.join(" "),
-              autofocus: true %>
-        <% if @app.errors[:name].any? %>
-          <p class="field-error-message"><%= @app.errors[:name].first %></p>
-        <% end %>
-      </div>
+        <div class="form-field mt-6">
+          <%= f.label :app_store_url, "App Store URL", class: "form-label" %>
+          <%= f.text_field :app_store_url,
+                placeholder: "https://apps.apple.com/us/app/app-name/id123456789",
+                class: "form-input" %>
+          <p class="form-hint">Optional. The store ID is parsed automatically from the URL.</p>
+        </div>
 
-      <div class="form-field">
-        <%= label_tag "app_app_store_url", "App Store URL", class: "form-label" %>
-        <%= text_field_tag "app[app_store_url]",
-              params.dig(:app, :app_store_url),
-              placeholder: "https://apps.apple.com/us/app/app-name/id123456789",
-              class: ["form-input", ("form-field-error" if @app.errors[:app_store_url].any?)].compact.join(" ") %>
-        <p class="app-form-hint">Optional. The store ID is parsed automatically from the URL.</p>
-        <% if @app.errors[:app_store_url].any? %>
-          <p class="field-error-message"><%= @app.errors[:app_store_url].first %></p>
-        <% end %>
-      </div>
+        <div class="form-field mt-6">
+          <%= f.label :play_store_url, "Play Store URL", class: "form-label" %>
+          <%= f.text_field :play_store_url,
+                placeholder: "https://play.google.com/store/apps/details?id=com.example.app",
+                class: "form-input" %>
+          <p class="form-hint">Optional. The store ID is parsed automatically from the URL.</p>
+        </div>
 
-      <div class="form-field">
-        <%= label_tag "app_play_store_url", "Play Store URL", class: "form-label" %>
-        <%= text_field_tag "app[play_store_url]",
-              params.dig(:app, :play_store_url),
-              placeholder: "https://play.google.com/store/apps/details?id=com.example.app",
-              class: ["form-input", ("form-field-error" if @app.errors[:play_store_url].any?)].compact.join(" ") %>
-        <p class="app-form-hint">Optional. The store ID is parsed automatically from the URL.</p>
-        <% if @app.errors[:play_store_url].any? %>
-          <p class="field-error-message"><%= @app.errors[:play_store_url].first %></p>
-        <% end %>
-      </div>
-
-      <div class="form-actions">
-        <%= link_to "CANCEL", workspace_path(@workspace), class: "btn-ghost" %>
-        <%= f.submit "ADD APP", class: "btn-primary" %>
-      </div>
-
-    <% end %>
+        <div class="flex justify-end items-center gap-4 mt-6">
+          <%= link_to "Cancel", workspace_path(@workspace), class: "btn-ghost" %>
+          <%= f.submit "Add App", class: "btn-primary" %>
+        </div>
+      <% end %>
+    </div>
   </div>
 </main>
