@@ -1,14 +1,4 @@
-/* ============================================================
-   Apps — new app form page layout
-   ============================================================ */
-
-.new-app-body {
-  display: flex;
-  justify-content: center;
-}
-
 .app-form-card {
-  width: 100%;
   max-width: 560px;
 }
 
