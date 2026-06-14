@@ -24,3 +24,11 @@
 .form-input::placeholder {
   color: var(--text-tertiary);
 }
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+}
