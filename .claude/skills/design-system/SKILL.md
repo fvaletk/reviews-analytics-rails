@@ -196,6 +196,23 @@ Place in the navbar partial:
 
 ---
 
+## Scope of Styling Changes
+
+When a ticket asks to "improve", "fix", or "style" a specific element — that means
+touching **only that element**. Never restructure the surrounding layout unless the
+ticket explicitly asks for it.
+
+Examples:
+- "Fix the input styling" → change classes on the `<input>` only
+- "Improve the button" → change classes on the `<button>` only
+- "Style the label" → change classes on the `<label>` only
+
+**Never** add card wrappers, change page centering, adjust max-widths, or restructure
+the DOM in response to a styling ticket. If the layout needs changing, that is a
+separate ticket with an explicit layout description.
+
+If you are unsure whether a change is in scope — it isn't. Do only what is stated.
+
 ## No Inline Styles
 
 Never use `style="..."` attributes in ERB views. Always define a CSS class instead.
