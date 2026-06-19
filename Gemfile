@@ -38,6 +38,9 @@ gem "omniauth-rails_csrf_protection"
 # Authorization
 gem "pundit"
 
+# HTTP client for FastAPI scraping service
+gem "faraday"
+
 # Reduces boot times through caching; required in config/boot.rb
 gem "bootsnap", require: false
 

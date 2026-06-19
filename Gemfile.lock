@@ -466,6 +466,7 @@ DEPENDENCIES
   devise
   factory_bot_rails
   faker
+  faraday
   importmap-rails
   jbuilder
   kamal
