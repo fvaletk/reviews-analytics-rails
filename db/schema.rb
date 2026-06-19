@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_11_005944) do
+ActiveRecord::Schema[8.0].define(version: 2026_06_19_000002) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -35,6 +35,36 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_11_005944) do
     t.datetime "updated_at", null: false
     t.index ["email", "workspace_id"], name: "index_pending_invitations_on_email_and_workspace_id", unique: true
     t.index ["workspace_id"], name: "index_pending_invitations_on_workspace_id"
+  end
+
+  create_table "reports", force: :cascade do |t|
+    t.bigint "app_id", null: false
+    t.bigint "generated_by_user_id", null: false
+    t.integer "status", default: 0, null: false
+    t.text "failure_reason"
+    t.jsonb "structured_output"
+    t.integer "total_reviews_analyzed", default: 0, null: false
+    t.datetime "reviews_fetched_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["app_id"], name: "index_reports_on_app_id"
+    t.index ["generated_by_user_id"], name: "index_reports_on_generated_by_user_id"
+  end
+
+  create_table "reviews", force: :cascade do |t|
+    t.bigint "app_id", null: false
+    t.integer "store", null: false
+    t.string "external_id", null: false
+    t.string "author"
+    t.integer "rating"
+    t.string "title"
+    t.text "body"
+    t.datetime "reviewed_at"
+    t.datetime "fetched_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["app_id", "store", "external_id"], name: "index_reviews_on_app_id_and_store_and_external_id", unique: true
+    t.index ["app_id"], name: "index_reviews_on_app_id"
   end
 
   create_table "users", force: :cascade do |t|
@@ -79,6 +109,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_11_005944) do
   add_foreign_key "apps", "users", column: "created_by_user_id"
   add_foreign_key "apps", "workspaces"
   add_foreign_key "pending_invitations", "workspaces"
+  add_foreign_key "reports", "apps"
+  add_foreign_key "reports", "users", column: "generated_by_user_id"
+  add_foreign_key "reviews", "apps"
   add_foreign_key "workspace_memberships", "users"
   add_foreign_key "workspace_memberships", "workspaces"
 end

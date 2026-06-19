@@ -4,6 +4,9 @@ class App < ApplicationRecord
   belongs_to :workspace
   belongs_to :created_by, class_name: "User", foreign_key: :created_by_user_id
 
+  has_many :reviews, dependent: :destroy
+  has_many :reports, dependent: :destroy
+
   attr_accessor :app_store_url, :play_store_url
 
   validates :name, presence: true

@@ -14,6 +14,26 @@ RSpec.describe App, type: :model do
       expect(association.macro).to eq(:belongs_to)
       expect(association.options[:class_name]).to eq("User")
     end
+
+    it "has many reviews" do
+      association = described_class.reflect_on_association(:reviews)
+      expect(association.macro).to eq(:has_many)
+    end
+
+    it "destroys reviews when app is destroyed" do
+      association = described_class.reflect_on_association(:reviews)
+      expect(association.options[:dependent]).to eq(:destroy)
+    end
+
+    it "has many reports" do
+      association = described_class.reflect_on_association(:reports)
+      expect(association.macro).to eq(:has_many)
+    end
+
+    it "destroys reports when app is destroyed" do
+      association = described_class.reflect_on_association(:reports)
+      expect(association.options[:dependent]).to eq(:destroy)
+    end
   end
 
   describe "Workspace#apps association" do
