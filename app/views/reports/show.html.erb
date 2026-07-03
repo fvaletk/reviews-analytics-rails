@@ -1,0 +1,45 @@
+<% content_for :title, "Report — #{@app.name} — #{@workspace.name} — Reviews Analytics" %>
+
+<main class="page-container">
+  <header class="page-header">
+    <div class="flex items-center">
+      <%= link_to "← #{@app.name}", workspace_app_path(@workspace, @app), class: "app-show-back-link" %>
+    </div>
+    <h1 class="page-title app-show-title">Report</h1>
+  </header>
+
+  <div class="page-body">
+    <div class="card app-show-card report-show-card">
+      <h2 class="card-title">Overview</h2>
+
+      <dl class="app-detail-list">
+        <div class="app-detail-row">
+          <dt class="app-detail-label">Status</dt>
+          <dd class="app-detail-value">
+            <span class="report-detail-status">
+              <span class="status-dot report-detail-status-dot report-detail-status-dot--<%= @report.status %>"></span>
+              <span class="report-detail-status-label"><%= @report.status.humanize %></span>
+            </span>
+          </dd>
+        </div>
+
+        <div class="app-detail-row">
+          <dt class="app-detail-label">Reviews Analyzed</dt>
+          <dd class="app-detail-value app-detail-meta"><%= @report.total_reviews_analyzed %></dd>
+        </div>
+
+        <% if @report.failure_reason.present? %>
+          <div class="app-detail-row">
+            <dt class="app-detail-label">Failure Reason</dt>
+            <dd class="app-detail-value app-detail-meta"><%= @report.failure_reason %></dd>
+          </div>
+        <% end %>
+      </dl>
+    </div>
+
+    <div class="card report-show-output-card">
+      <h2 class="card-title">Structured Output</h2>
+      <pre class="report-output-pre"><%= JSON.pretty_generate(@report.structured_output || {}) %></pre>
+    </div>
+  </div>
+</main>

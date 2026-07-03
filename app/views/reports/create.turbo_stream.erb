@@ -1,6 +1,10 @@
 <%= turbo_stream.replace "report_status" do %>
-  <div id="report_status" class="report-status">
+  <div id="report_status" class="report-status"
+       data-controller="report-status"
+       data-report-status-report-id-value="<%= @report.id %>"
+       data-report-status-view-report-url-value="<%= workspace_app_report_path(@workspace, @app, @report) %>"
+       data-report-status-retry-url-value="<%= workspace_app_reports_path(@workspace, @app) %>">
     <span class="status-dot is-active report-status-dot"></span>
-    <span class="report-status-label">Generating&hellip;</span>
+    <span class="report-status-label" data-report-status-target="label">Generating&hellip;</span>
   </div>
 <% end %>

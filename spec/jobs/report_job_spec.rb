@@ -85,7 +85,7 @@ RSpec.describe ReportJob, type: :job do
 
       it "broadcasts the failed status" do
         expect(ActionCable.server).to have_received(:broadcast)
-          .with("report_#{report.id}", { status: "failed" })
+          .with("report_#{report.id}", { status: "failed", failure_reason: "timeout" })
       end
     end
 

@@ -8,9 +8,11 @@ Rails.application.routes.draw do
     resources :memberships, only: [:new, :create, :destroy],
                             controller: "workspace_memberships"
     resources :apps, only: [:new, :create, :show] do
-      resources :reports, only: [:create]
+      resources :reports, only: [:create, :show]
     end
   end
+
+  mount ActionCable.server => "/cable"
 
   root "dashboard#index"
 

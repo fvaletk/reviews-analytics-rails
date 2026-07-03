@@ -7,6 +7,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <%= action_cable_meta_tag %>
 
     <%= yield :head %>
 
@@ -27,6 +28,7 @@
     <%= stylesheet_link_tag "components/forms", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "pages/workspace", "data-turbo-track": "reload" %>
     <%= stylesheet_link_tag "pages/apps", "data-turbo-track": "reload" %>
+    <%= stylesheet_link_tag "pages/reports", "data-turbo-track": "reload" %>
     <%= javascript_importmap_tags %>
   </head>
 

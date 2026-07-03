@@ -20,6 +20,11 @@ class ReportsController < ApplicationController
     end
   end
 
+  def show
+    @report = @app.reports.find(params[:id])
+    authorize @report
+  end
+
   private
 
   def set_workspace

@@ -42,7 +42,10 @@ class ReportJob < ApplicationJob
   end
 
   def broadcast(report)
-    ActionCable.server.broadcast("report_#{report.id}", { status: report.status })
+    ActionCable.server.broadcast(
+      "report_#{report.id}",
+      { status: report.status, failure_reason: report.failure_reason }
+    )
   end
 
   def build_review_records(reviews, app_id)
