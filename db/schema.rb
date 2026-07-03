@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_06_19_000002) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_03_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -24,6 +24,20 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_19_000002) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["workspace_id"], name: "index_apps_on_workspace_id"
+  end
+
+  create_table "notifications", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.bigint "workspace_id", null: false
+    t.bigint "report_id", null: false
+    t.string "message", null: false
+    t.datetime "read_at"
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["report_id"], name: "index_notifications_on_report_id"
+    t.index ["user_id", "read_at"], name: "index_notifications_on_user_id_and_read_at"
+    t.index ["user_id"], name: "index_notifications_on_user_id"
+    t.index ["workspace_id"], name: "index_notifications_on_workspace_id"
   end
 
   create_table "pending_invitations", force: :cascade do |t|
@@ -108,6 +122,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_06_19_000002) do
 
   add_foreign_key "apps", "users", column: "created_by_user_id"
   add_foreign_key "apps", "workspaces"
+  add_foreign_key "notifications", "reports"
+  add_foreign_key "notifications", "users"
+  add_foreign_key "notifications", "workspaces"
   add_foreign_key "pending_invitations", "workspaces"
   add_foreign_key "reports", "apps"
   add_foreign_key "reports", "users", column: "generated_by_user_id"
