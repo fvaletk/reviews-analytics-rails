@@ -1,5 +1,17 @@
 <% content_for :title, "Report — #{@app.name} — #{@workspace.name} — Reviews Analytics" %>
 
+<%
+  output = @report.structured_output || {}
+  store_counts = @app.reviews.group(:store).count
+  generated_at = @report.reviews_fetched_at || @report.created_at
+
+  pain_points = output["pain_points"] || []
+  complaints = output["complaints"] || []
+  feature_requests = output["feature_requests"] || []
+  strengths = output["strengths"] || []
+  opportunities = output["opportunities"] || []
+%>
+
 <main class="page-container">
   <header class="page-header">
     <div class="flex items-center">
@@ -9,37 +21,138 @@
   </header>
 
   <div class="page-body">
-    <div class="card app-show-card report-show-card">
-      <h2 class="card-title">Overview</h2>
+    <div class="card report-meta-bar">
+      <div class="report-meta-item">
+        <span class="report-meta-label">App</span>
+        <span class="report-meta-value"><%= @app.name %></span>
+      </div>
 
-      <dl class="app-detail-list">
-        <div class="app-detail-row">
-          <dt class="app-detail-label">Status</dt>
-          <dd class="app-detail-value">
-            <span class="report-detail-status">
-              <span class="status-dot report-detail-status-dot report-detail-status-dot--<%= @report.status %>"></span>
-              <span class="report-detail-status-label"><%= @report.status.humanize %></span>
-            </span>
-          </dd>
+      <div class="report-meta-item">
+        <span class="report-meta-label">Reviews Analyzed</span>
+        <span class="report-meta-value"><%= @report.total_reviews_analyzed %></span>
+      </div>
+
+      <div class="report-meta-item">
+        <span class="report-meta-label">Store Breakdown</span>
+        <span class="report-meta-value">
+          App Store <%= store_counts["app_store"] || 0 %> / Play Store <%= store_counts["play_store"] || 0 %>
+        </span>
+      </div>
+
+      <div class="report-meta-item">
+        <span class="report-meta-label">Generated</span>
+        <span class="report-meta-value"><%= generated_at.strftime("%-d %b %Y") %></span>
+      </div>
+    </div>
+
+    <section class="card report-section">
+      <h2 class="card-title">Executive Summary</h2>
+      <% if output["summary"].present? %>
+        <p class="report-summary-text"><%= output["summary"] %></p>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
+
+    <section class="card report-section">
+      <h2 class="card-title">Pain Points</h2>
+      <% if pain_points.any? %>
+        <div class="report-card-grid">
+          <% pain_points.each do |pain_point| %>
+            <div class="report-pain-point-card">
+              <div class="report-pain-point-header">
+                <h3 class="report-pain-point-title"><%= pain_point["title"] %></h3>
+                <div class="report-badge-group">
+                  <span class="badge badge-<%= pain_point["severity"] %>"><%= pain_point["severity"] %></span>
+                  <span class="badge badge-<%= pain_point["frequency"] %>"><%= pain_point["frequency"] %> freq</span>
+                </div>
+              </div>
+              <p class="report-card-description"><%= pain_point["description"] %></p>
+            </div>
+          <% end %>
         </div>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
 
-        <div class="app-detail-row">
-          <dt class="app-detail-label">Reviews Analyzed</dt>
-          <dd class="app-detail-value app-detail-meta"><%= @report.total_reviews_analyzed %></dd>
-        </div>
+    <section class="card report-section">
+      <h2 class="card-title">Complaints</h2>
+      <% if complaints.any? %>
+        <ul class="report-list">
+          <% complaints.each do |complaint| %>
+            <li class="report-list-item">
+              <div class="report-list-item-header">
+                <span class="report-list-item-title"><%= complaint["title"] %></span>
+                <span class="badge badge-<%= complaint["frequency"] %>"><%= complaint["frequency"] %> freq</span>
+              </div>
+              <p class="report-card-description"><%= complaint["description"] %></p>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
 
-        <% if @report.failure_reason.present? %>
-          <div class="app-detail-row">
-            <dt class="app-detail-label">Failure Reason</dt>
-            <dd class="app-detail-value app-detail-meta"><%= @report.failure_reason %></dd>
+    <section class="card report-section">
+      <h2 class="card-title">Feature Requests</h2>
+      <% if feature_requests.any? %>
+        <% feature_requests.each do |group| %>
+          <div class="report-feature-category">
+            <h3 class="report-feature-category-title"><%= group["category"] %></h3>
+            <ul class="report-list">
+              <% (group["items"] || []).each do |item| %>
+                <li class="report-list-item">
+                  <div class="report-list-item-header">
+                    <span class="report-list-item-title"><%= item["title"] %></span>
+                    <span class="badge badge-<%= item["demand"] %>"><%= item["demand"] %> demand</span>
+                  </div>
+                  <p class="report-card-description"><%= item["description"] %></p>
+                </li>
+              <% end %>
+            </ul>
           </div>
         <% end %>
-      </dl>
-    </div>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
 
-    <div class="card report-show-output-card">
-      <h2 class="card-title">Structured Output</h2>
-      <pre class="report-output-pre"><%= JSON.pretty_generate(@report.structured_output || {}) %></pre>
-    </div>
+    <section class="card report-section">
+      <h2 class="card-title">Strengths</h2>
+      <% if strengths.any? %>
+        <ul class="report-list">
+          <% strengths.each do |strength| %>
+            <li class="report-list-item">
+              <span class="report-list-item-title"><%= strength["title"] %></span>
+              <p class="report-card-description"><%= strength["description"] %></p>
+            </li>
+          <% end %>
+        </ul>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
+
+    <section class="card report-section">
+      <h2 class="card-title">Opportunities</h2>
+      <% if opportunities.any? %>
+        <div class="report-card-grid">
+          <% opportunities.each do |opportunity| %>
+            <div class="report-opportunity-card">
+              <h3 class="report-pain-point-title"><%= opportunity["title"] %></h3>
+              <p class="report-card-description"><%= opportunity["description"] %></p>
+              <p class="report-opportunity-rationale">
+                <span class="report-opportunity-rationale-label">Rationale</span>
+                <%= opportunity["rationale"] %>
+              </p>
+            </div>
+          <% end %>
+        </div>
+      <% else %>
+        <p class="report-empty-state">No data</p>
+      <% end %>
+    </section>
   </div>
 </main>
