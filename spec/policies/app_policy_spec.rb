@@ -46,6 +46,10 @@ RSpec.describe AppPolicy, type: :policy do
     it "denies destroy?" do
       expect(policy.destroy?).to be false
     end
+
+    it "denies generate_report?" do
+      expect(policy.generate_report?).to be false
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -76,6 +80,10 @@ RSpec.describe AppPolicy, type: :policy do
 
     it "permits destroy?" do
       expect(policy.destroy?).to be true
+    end
+
+    it "permits generate_report?" do
+      expect(policy.generate_report?).to be true
     end
   end
 
@@ -108,6 +116,10 @@ RSpec.describe AppPolicy, type: :policy do
     it "permits destroy?" do
       expect(policy.destroy?).to be true
     end
+
+    it "permits generate_report?" do
+      expect(policy.generate_report?).to be true
+    end
   end
 
   # ---------------------------------------------------------------------------
@@ -138,6 +150,10 @@ RSpec.describe AppPolicy, type: :policy do
 
     it "denies destroy?" do
       expect(policy.destroy?).to be_falsey
+    end
+
+    it "denies generate_report?" do
+      expect(policy.generate_report?).to be_falsey
     end
   end
 

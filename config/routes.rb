@@ -7,7 +7,9 @@ Rails.application.routes.draw do
   resources :workspaces, only: [:new, :create, :show] do
     resources :memberships, only: [:new, :create, :destroy],
                             controller: "workspace_memberships"
-    resources :apps, only: [:new, :create, :show]
+    resources :apps, only: [:new, :create, :show] do
+      resources :reports, only: [:create]
+    end
   end
 
   root "dashboard#index"

@@ -8,6 +8,16 @@
     <h1 class="page-title app-show-title"><%= @app.name %></h1>
   </header>
 
+  <div class="section-header app-show-report-header">
+    <div id="report_status" class="report-status"></div>
+    <% if policy(@app).generate_report? %>
+      <%= button_to "Generate Report",
+            workspace_app_reports_path(@workspace, @app),
+            method: :post,
+            class: "btn-primary" %>
+    <% end %>
+  </div>
+
   <div class="page-body">
     <div class="card app-show-card">
       <h2 class="card-title">Store Details</h2>
