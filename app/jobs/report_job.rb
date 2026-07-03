@@ -30,9 +30,11 @@ class ReportJob < ApplicationJob
       reviews_fetched_at: Time.current
     )
     broadcast(report)
+    notify_workspace_members(report, app, "Report for #{app.name} is ready.")
   rescue ScrapingService::Error, StandardError => e
     report&.update(status: :failed, failure_reason: e.message)
     broadcast(report) if report
+    notify_workspace_members(report, app, "Report for #{app.name} failed: #{e.message}") if report
   end
 
   private
@@ -47,6 +49,25 @@ class ReportJob < ApplicationJob
       "report_#{report.id}",
       { status: report.status, failure_reason: report.failure_reason }
     )
+  end
+
+  def notify_workspace_members(report, app, message)
+    now = Time.current
+    user_ids = app.workspace.workspace_memberships.pluck(:user_id)
+
+    notification_records = user_ids.map do |user_id|
+      {
+        user_id: user_id,
+        workspace_id: app.workspace_id,
+        report_id: report.id,
+        message: message,
+        read_at: nil,
+        created_at: now,
+        updated_at: now
+      }
+    end
+
+    Notification.insert_all(notification_records) if notification_records.any?
   end
 
   def build_review_records(reviews, app_id)

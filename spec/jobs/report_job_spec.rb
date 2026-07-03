@@ -85,6 +85,51 @@ RSpec.describe ReportJob, type: :job do
       end
     end
 
+    context "on the success path with workspace members" do
+      let(:collaborator) { create(:user) }
+      let(:admin) { create(:user) }
+      let(:super_admin) { create(:user) }
+
+      let!(:memberships) do
+        [
+          create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator),
+          create(:workspace_membership, user: admin, workspace: workspace, role: :admin),
+          create(:workspace_membership, user: super_admin, workspace: workspace, role: :super_admin)
+        ]
+      end
+
+      before { described_class.perform_now(report.id) }
+
+      it "creates one notification per workspace member" do
+        expect(Notification.count).to eq(memberships.size)
+      end
+
+      it "notifies every member's user_id" do
+        expect(Notification.pluck(:user_id)).to match_array(memberships.map(&:user_id))
+      end
+
+      it "sets the notification message to indicate the report is ready" do
+        expect(Notification.pluck(:message)).to all(match(/Report for #{app.name} is ready/))
+      end
+
+      it "sets the correct report_id on each notification" do
+        expect(Notification.pluck(:report_id)).to all(eq(report.id))
+      end
+
+      it "sets the correct workspace_id on each notification" do
+        expect(Notification.pluck(:workspace_id)).to all(eq(workspace.id))
+      end
+
+      it "leaves notifications unread" do
+        expect(Notification.pluck(:read_at)).to all(be_nil)
+      end
+
+      it "uses insert_all rather than looping .create calls" do
+        expect(Notification).to receive(:insert_all).once.and_call_original
+        described_class.perform_now(report.id)
+      end
+    end
+
     context "when ScrapingService raises an error" do
       before do
         allow(ScrapingService).to receive(:fetch).and_raise(ScrapingService::Error, "timeout")
@@ -102,6 +147,39 @@ RSpec.describe ReportJob, type: :job do
       it "broadcasts the failed status" do
         expect(ActionCable.server).to have_received(:broadcast)
           .with("report_#{report.id}", { status: "failed", failure_reason: "timeout" })
+      end
+    end
+
+    context "when ScrapingService raises an error and the workspace has members" do
+      let(:collaborator) { create(:user) }
+      let(:admin) { create(:user) }
+
+      let!(:memberships) do
+        [
+          create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator),
+          create(:workspace_membership, user: admin, workspace: workspace, role: :admin)
+        ]
+      end
+
+      before do
+        allow(ScrapingService).to receive(:fetch).and_raise(ScrapingService::Error, "timeout")
+        described_class.perform_now(report.id)
+      end
+
+      it "creates one failure notification per workspace member" do
+        expect(Notification.count).to eq(memberships.size)
+      end
+
+      it "notifies every member's user_id" do
+        expect(Notification.pluck(:user_id)).to match_array(memberships.map(&:user_id))
+      end
+
+      it "sets the notification message to indicate the report failed" do
+        expect(Notification.pluck(:message)).to all(match(/Report for #{app.name} failed/))
+      end
+
+      it "includes the failure reason in the notification message" do
+        expect(Notification.pluck(:message)).to all(include("timeout"))
       end
     end
 
