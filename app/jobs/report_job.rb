@@ -21,6 +21,7 @@ class ReportJob < ApplicationJob
     update_status(report, :analyzing)
 
     result = LlmService.analyze(reviews: Review.where(app: app))
+    ReportSchemaValidator.validate!(result)
 
     report.update!(
       structured_output: result,

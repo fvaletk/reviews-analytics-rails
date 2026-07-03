@@ -23,7 +23,23 @@ RSpec.describe ReportJob, type: :job do
   end
 
   let(:scraping_response) { { "reviews" => scraped_reviews } }
-  let(:llm_result) { { "summary" => "Positive sentiment overall" } }
+  let(:llm_result) do
+    {
+      "summary" => "Positive sentiment overall",
+      "pain_points" => [
+        {
+          "title" => "Crashes on launch",
+          "severity" => "high",
+          "frequency" => 3,
+          "description" => "App crashes immediately after opening"
+        }
+      ],
+      "complaints" => [],
+      "feature_requests" => [],
+      "strengths" => [],
+      "opportunities" => []
+    }
+  end
 
   before do
     allow(ScrapingService).to receive(:fetch).and_return(scraping_response)
@@ -101,6 +117,24 @@ RSpec.describe ReportJob, type: :job do
 
       it "saves the failure reason" do
         expect(report.reload.failure_reason).to eq("unexpected")
+      end
+    end
+
+    context "when LlmService returns a payload that fails schema validation" do
+      let(:llm_result) { { "pain_points" => [], "complaints" => [], "feature_requests" => [], "strengths" => [], "opportunities" => [] } }
+
+      before { described_class.perform_now(report.id) }
+
+      it "sets status to failed" do
+        expect(report.reload.status).to eq("failed")
+      end
+
+      it "saves the validator's error message as the failure reason" do
+        expect(report.reload.failure_reason).to match(/missing key: summary/)
+      end
+
+      it "does not save the invalid structured_output" do
+        expect(report.reload.structured_output).to be_nil
       end
     end
   end
