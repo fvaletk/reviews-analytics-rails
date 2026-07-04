@@ -1,3 +1,5 @@
+require "sidekiq/web"
+
 Rails.application.routes.draw do
   devise_for :users, controllers: { omniauth_callbacks: "users/omniauth_callbacks" }
 
@@ -24,6 +26,14 @@ Rails.application.routes.draw do
   end
 
   mount ActionCable.server => "/cable"
+
+  # Sidekiq Web UI is intentionally development-only for now — mounting it
+  # unconditionally would expose an unauthenticated admin UI (with job
+  # retry/delete actions) in staging/production.
+  # TODO: add authentication before enabling in any deployed environment
+  if Rails.env.development?
+    mount Sidekiq::Web => "/sidekiq"
+  end
 
   root "dashboard#index"
 
