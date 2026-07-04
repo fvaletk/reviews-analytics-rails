@@ -30,6 +30,9 @@ gem "solid_cable"
 # Background job processing
 gem "sidekiq"
 
+# Redis client, required by the Action Cable redis adapter and Sidekiq
+gem "redis", "~> 5.0"
+
 # Authentication
 gem "devise"
 gem "omniauth-google-oauth2"
