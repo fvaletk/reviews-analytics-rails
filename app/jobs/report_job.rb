@@ -31,11 +31,15 @@ class ReportJob < ApplicationJob
     result = LlmService.analyze(reviews: reviews_for_analysis)
     ReportSchemaValidator.validate!(result)
 
+    app_store_reviews_count, play_store_reviews_count = store_breakdown(reviews_for_analysis)
+
     report.update!(
       structured_output: result,
       status: :complete,
       total_reviews_analyzed: total_reviews_analyzed,
-      reviews_fetched_at: Time.current
+      reviews_fetched_at: Time.current,
+      app_store_reviews_count: app_store_reviews_count,
+      play_store_reviews_count: play_store_reviews_count
     )
     broadcast(report)
     notify_workspace_members(report, app, "Report for #{app.name} is ready.")
@@ -46,6 +50,11 @@ class ReportJob < ApplicationJob
   end
 
   private
+
+  def store_breakdown(reviews)
+    counts = reviews.pluck(:store).tally
+    [counts["app_store"] || 0, counts["play_store"] || 0]
+  end
 
   def update_status(report, status)
     report.update!(status: status)

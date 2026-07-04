@@ -18,6 +18,24 @@ RSpec.describe ReportJob, type: :job do
         "title" => "Great app",
         "body" => "Love it",
         "reviewed_at" => "2024-01-01T00:00:00Z"
+      },
+      {
+        "external_id" => "r2",
+        "store" => "play_store",
+        "author" => "Bob",
+        "rating" => 4,
+        "title" => nil,
+        "body" => "Pretty good",
+        "reviewed_at" => "2024-01-02T00:00:00Z"
+      },
+      {
+        "external_id" => "r3",
+        "store" => "play_store",
+        "author" => "Carol",
+        "rating" => 3,
+        "title" => nil,
+        "body" => "It's okay",
+        "reviewed_at" => "2024-01-03T00:00:00Z"
       }
     ]
   end
@@ -60,11 +78,19 @@ RSpec.describe ReportJob, type: :job do
       end
 
       it "records the number of reviews analyzed" do
-        expect(report.reload.total_reviews_analyzed).to eq(1)
+        expect(report.reload.total_reviews_analyzed).to eq(3)
       end
 
       it "upserts reviews using insert_all" do
-        expect(Review.where(app: app).count).to eq(1)
+        expect(Review.where(app: app).count).to eq(3)
+      end
+
+      it "sets app_store_reviews_count based on the reviews actually analyzed" do
+        expect(report.reload.app_store_reviews_count).to eq(1)
+      end
+
+      it "sets play_store_reviews_count based on the reviews actually analyzed" do
+        expect(report.reload.play_store_reviews_count).to eq(2)
       end
 
       it "broadcasts on each status change" do
@@ -297,7 +323,8 @@ RSpec.describe ReportJob, type: :job do
 
     context "when skip_scraping: true" do
       let!(:existing_reviews) do
-        create_list(:review, 3, app: app, reviewed_at: 1.day.ago)
+        create_list(:review, 3, app: app, store: :app_store, reviewed_at: 1.day.ago) +
+          create_list(:review, 2, app: app, store: :play_store, reviewed_at: 1.day.ago)
       end
 
       before { described_class.perform_now(report.id, skip_scraping: true) }
@@ -328,6 +355,14 @@ RSpec.describe ReportJob, type: :job do
         expect(report.reload.total_reviews_analyzed).to eq(
           app.reviews.order(reviewed_at: :desc).limit(500).size
         )
+      end
+
+      it "sets app_store_reviews_count based on the existing reviews used" do
+        expect(report.reload.app_store_reviews_count).to eq(3)
+      end
+
+      it "sets play_store_reviews_count based on the existing reviews used" do
+        expect(report.reload.play_store_reviews_count).to eq(2)
       end
 
       it "calls LlmService with the existing reviews" do

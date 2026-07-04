@@ -417,6 +417,100 @@ RSpec.describe "Reports", type: :request do
   end
 
   # ---------------------------------------------------------------------------
+  # GET /workspaces/:workspace_id/apps/:app_id/reports (index)
+  # ---------------------------------------------------------------------------
+  describe "GET .../reports (index)" do
+    context "when signed in as a collaborator" do
+      let!(:oldest_complete) do
+        create(:report, app: the_app, status: :complete, created_at: 3.days.ago, generated_by: user,
+                        total_reviews_analyzed: 10, app_store_reviews_count: 6, play_store_reviews_count: 4)
+      end
+      let!(:newest_complete) do
+        create(:report, app: the_app, status: :complete, created_at: 1.day.ago, generated_by: user,
+                        total_reviews_analyzed: 20, app_store_reviews_count: 15, play_store_reviews_count: 5)
+      end
+      let!(:pending_report) { create(:report, app: the_app, status: :pending, created_at: 2.days.ago) }
+      let!(:failed_report) { create(:report, app: the_app, status: :failed, created_at: 2.days.ago) }
+
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "returns 200 OK" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "excludes the pending report's link" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).not_to include(workspace_app_report_path(workspace, the_app, pending_report))
+      end
+
+      it "excludes the failed report's link" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).not_to include(workspace_app_report_path(workspace, the_app, failed_report))
+      end
+
+      it "lists complete reports in reverse chronological order" do
+        get workspace_app_reports_path(workspace, the_app)
+        newest_index = response.body.index(workspace_app_report_path(workspace, the_app, newest_complete))
+        oldest_index = response.body.index(workspace_app_report_path(workspace, the_app, oldest_complete))
+        expect(newest_index).to be < oldest_index
+      end
+
+      it "links each report to its show page" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).to include(workspace_app_report_path(workspace, the_app, newest_complete))
+      end
+
+      it "renders the generated_by user's name" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).to include(CGI.escapeHTML(user.name))
+      end
+
+      it "renders the total reviews analyzed" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).to include("20 reviews analyzed")
+      end
+
+      it "renders the store breakdown counts" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).to include("App Store: 15 / Play Store: 5")
+      end
+    end
+
+    context "when there are no completed reports" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+        create(:report, app: the_app, status: :pending)
+      end
+
+      it "shows the empty state message" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response.body).to include("No reports yet.")
+      end
+    end
+
+    context "when the user has no membership in the workspace" do
+      before { sign_in user }
+
+      it "returns 404 Not Found" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response).to have_http_status(:not_found)
+      end
+    end
+
+    context "when not signed in" do
+      it "redirects to sign in" do
+        get workspace_app_reports_path(workspace, the_app)
+        expect(response).to redirect_to(sign_in_path)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # POST /workspaces/:workspace_id/apps/:app_id/reports/:id/refresh
   # ---------------------------------------------------------------------------
   describe "POST /workspaces/:workspace_id/apps/:app_id/reports/:id/refresh" do

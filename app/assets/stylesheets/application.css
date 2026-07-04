@@ -480,6 +480,19 @@ a:hover {
   margin-top: var(--space-3);
 }
 
+.app-show-history-link {
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--accent);
+  text-decoration: none;
+  margin-top: var(--space-3);
+  transition: color var(--transition-base);
+}
+
+.app-show-history-link:hover {
+  color: var(--accent-hover);
+}
+
 .app-show-card {
   max-width: 640px;
 }

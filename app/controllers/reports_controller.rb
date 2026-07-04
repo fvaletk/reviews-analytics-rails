@@ -9,6 +9,11 @@ class ReportsController < ApplicationController
   # this ticket explicitly requires a 403 for unauthorized report generation.
   rescue_from Pundit::NotAuthorizedError, with: :handle_not_authorized
 
+  def index
+    authorize @app, :show?
+    @reports = @app.reports.where(status: :complete).includes(:generated_by).order(created_at: :desc)
+  end
+
   def create
     authorize @app, :generate_report?
 

@@ -6,6 +6,7 @@
       <%= link_to "← #{@workspace.name}", workspace_path(@workspace), class: "app-show-back-link" %>
     </div>
     <h1 class="page-title app-show-title"><%= @app.name %></h1>
+    <%= link_to "View Report History", workspace_app_reports_path(@workspace, @app), class: "app-show-history-link" %>
   </header>
 
   <div class="section-header app-show-report-header">
