@@ -11,10 +11,18 @@
   <div class="section-header app-show-report-header">
     <div id="report_status" class="report-status"></div>
     <% if policy(@app).generate_report? %>
-      <%= button_to "Generate Report",
-            workspace_app_reports_path(@workspace, @app),
-            method: :post,
-            class: "btn-primary" %>
+      <div class="flex items-center gap-2">
+        <% if @latest_completed_report.present? %>
+          <%= button_to "Re-analyze existing reviews",
+                reanalyze_workspace_app_report_path(@workspace, @app, @latest_completed_report),
+                method: :post,
+                class: "btn-secondary" %>
+        <% end %>
+        <%= button_to "Generate Report",
+              workspace_app_reports_path(@workspace, @app),
+              method: :post,
+              class: "btn-primary" %>
+      </div>
     <% end %>
   </div>
 

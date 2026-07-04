@@ -3,30 +3,38 @@
 class ReportJob < ApplicationJob
   queue_as :default
 
-  def perform(report_id)
+  def perform(report_id, skip_scraping: false)
     report = Report.find(report_id)
     app = report.app
 
-    update_status(report, :fetching)
+    if skip_scraping
+      reviews_for_analysis = app.reviews.order(reviewed_at: :desc).limit(500)
+      total_reviews_analyzed = reviews_for_analysis.size
+    else
+      update_status(report, :fetching)
 
-    raw = ScrapingService.fetch(
-      app_store_id: app.app_store_id,
-      app_store_country: app.app_store_country,
-      play_store_id: app.play_store_id
-    )
+      raw = ScrapingService.fetch(
+        app_store_id: app.app_store_id,
+        app_store_country: app.app_store_country,
+        play_store_id: app.play_store_id
+      )
 
-    reviews_data = build_review_records(raw["reviews"] || [], app.id)
-    Review.insert_all(reviews_data, unique_by: [:app_id, :store, :external_id]) if reviews_data.any?
+      reviews_data = build_review_records(raw["reviews"] || [], app.id)
+      Review.insert_all(reviews_data, unique_by: [:app_id, :store, :external_id]) if reviews_data.any?
+
+      reviews_for_analysis = Review.where(app: app)
+      total_reviews_analyzed = reviews_data.size
+    end
 
     update_status(report, :analyzing)
 
-    result = LlmService.analyze(reviews: Review.where(app: app))
+    result = LlmService.analyze(reviews: reviews_for_analysis)
     ReportSchemaValidator.validate!(result)
 
     report.update!(
       structured_output: result,
       status: :complete,
-      total_reviews_analyzed: reviews_data.size,
+      total_reviews_analyzed: total_reviews_analyzed,
       reviews_fetched_at: Time.current
     )
     broadcast(report)

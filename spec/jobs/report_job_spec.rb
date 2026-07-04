@@ -295,6 +295,50 @@ RSpec.describe ReportJob, type: :job do
       end
     end
 
+    context "when skip_scraping: true" do
+      let!(:existing_reviews) do
+        create_list(:review, 3, app: app, reviewed_at: 1.day.ago)
+      end
+
+      before { described_class.perform_now(report.id, skip_scraping: true) }
+
+      it "does not call ScrapingService" do
+        expect(ScrapingService).not_to have_received(:fetch)
+      end
+
+      it "does not create new reviews" do
+        expect(Review.where(app: app).count).to eq(existing_reviews.size)
+      end
+
+      it "transitions the report to complete" do
+        expect(report.reload.status).to eq("complete")
+      end
+
+      it "does not transition through fetching" do
+        expect(ActionCable.server).not_to have_received(:broadcast)
+          .with("report_#{report.id}", hash_including(status: "fetching"))
+      end
+
+      it "still transitions through analyzing" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("report_#{report.id}", hash_including(status: "analyzing"))
+      end
+
+      it "sets total_reviews_analyzed to the count of existing reviews used" do
+        expect(report.reload.total_reviews_analyzed).to eq(
+          app.reviews.order(reviewed_at: :desc).limit(500).size
+        )
+      end
+
+      it "calls LlmService with the existing reviews" do
+        expect(LlmService).to have_received(:analyze).with(reviews: anything)
+      end
+
+      it "saves the LLM structured output" do
+        expect(report.reload.structured_output).to eq(llm_result)
+      end
+    end
+
     context "when LlmService returns a payload that fails schema validation" do
       let(:llm_result) { { "pain_points" => [], "complaints" => [], "feature_requests" => [], "strengths" => [], "opportunities" => [] } }
 

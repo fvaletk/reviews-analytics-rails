@@ -25,6 +25,18 @@ class ReportsController < ApplicationController
     authorize @report
   end
 
+  def reanalyze
+    @app.reports.find(params[:id])
+    authorize @app, :generate_report?
+
+    @report = @app.reports.create!(status: :pending, generated_by: current_user)
+    ReportJob.perform_later(@report.id, skip_scraping: true)
+
+    respond_to do |format|
+      format.turbo_stream { render :create }
+    end
+  end
+
   private
 
   def set_workspace

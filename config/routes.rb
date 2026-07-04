@@ -8,7 +8,11 @@ Rails.application.routes.draw do
     resources :memberships, only: [:new, :create, :destroy],
                             controller: "workspace_memberships"
     resources :apps, only: [:new, :create, :show] do
-      resources :reports, only: [:create, :show]
+      resources :reports, only: [:create, :show] do
+        member do
+          post :reanalyze
+        end
+      end
     end
   end
 

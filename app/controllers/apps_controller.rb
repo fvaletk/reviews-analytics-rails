@@ -7,6 +7,7 @@ class AppsController < ApplicationController
   def show
     @app = @workspace.apps.find(params[:id])
     authorize @app
+    @latest_completed_report = @app.reports.complete.order(created_at: :desc).first
   end
 
   def new
