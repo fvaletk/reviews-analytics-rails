@@ -13,10 +13,16 @@
     <% if policy(@app).generate_report? %>
       <div class="flex items-center gap-2">
         <% if @latest_completed_report.present? %>
-          <%= button_to "Re-analyze existing reviews",
-                reanalyze_workspace_app_report_path(@workspace, @app, @latest_completed_report),
-                method: :post,
-                class: "btn-secondary" %>
+          <div class="regenerate-actions flex items-center gap-2">
+            <%= button_to "Re-analyze existing reviews",
+                  reanalyze_workspace_app_report_path(@workspace, @app, @latest_completed_report),
+                  method: :post,
+                  class: "btn-secondary" %>
+            <%= button_to "Refresh reviews + re-analyze",
+                  refresh_workspace_app_report_path(@workspace, @app, @latest_completed_report),
+                  method: :post,
+                  class: "btn-secondary" %>
+          </div>
         <% end %>
         <%= button_to "Generate Report",
               workspace_app_reports_path(@workspace, @app),

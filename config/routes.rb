@@ -11,6 +11,7 @@ Rails.application.routes.draw do
       resources :reports, only: [:create, :show] do
         member do
           post :reanalyze
+          post :refresh
         end
       end
     end
