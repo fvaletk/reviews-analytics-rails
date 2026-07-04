@@ -71,6 +71,13 @@ Sidekiq.configure_server { |c| c.redis = { url: ENV['REDIS_URL'] } }
 Sidekiq.configure_client { |c| c.redis = { url: ENV['REDIS_URL'] } }
 ```
 
+Rails 8 also does not include the `redis` gem by default. It must be added
+explicitly to the Gemfile whenever ActionCable or Sidekiq uses Redis:
+
+```ruby
+gem 'redis', '~> 5.0'
+```
+
 Do not use `solid_queue`, `SolidQueue::Job`, or any Solid Queue configuration.
 ActionCable uses the Redis adapter (not Solid Cable).
 
