@@ -2,37 +2,83 @@
   <div class="navbar-inner">
     <%= link_to "Reviews Analytics", root_path, class: "navbar-logo" %>
 
-    <div class="avatar-dropdown" data-controller="avatar-dropdown">
-      <button class="avatar-trigger"
-              data-action="click->avatar-dropdown#toggle"
-              aria-label="Open user menu"
-              type="button">
-        <% if current_user.avatar_url.present? %>
-          <img src="<%= current_user.avatar_url %>"
-               alt="<%= current_user.name %>"
-               class="avatar-photo"
-               onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
-          <span class="avatar-initials avatar-initials--hidden">
-            <%= current_user.name&.first&.upcase || current_user.email.first.upcase %>
-          </span>
-        <% else %>
-          <span class="avatar-initials"><%= current_user.name&.first&.upcase || current_user.email.first.upcase %></span>
-        <% end %>
-      </button>
+    <div class="navbar-right">
+      <div class="notification-bell" data-controller="notification-dropdown">
+        <button class="notification-bell-trigger"
+                data-action="click->notification-dropdown#toggle"
+                aria-label="Open notifications"
+                type="button">
+          <svg class="notification-bell-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 3C9.79086 3 8 4.79086 8 7V10.5858C8 11.1162 7.78929 11.6249 7.41421 12L5.29289 14.1213C4.92143 14.4927 4.71429 14.9942 4.71429 15.5169V16C4.71429 16.5523 5.16201 17 5.71429 17H18.2857C18.838 17 19.2857 16.5523 19.2857 16V15.5169C19.2857 14.9942 19.0786 14.4927 18.7071 14.1213L16.5858 12C16.2107 11.6249 16 11.1162 16 10.5858V7C16 4.79086 14.2091 3 12 3Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            <path d="M10 20C10 21.1046 10.8954 22 12 22C13.1046 22 14 21.1046 14 20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+          <span class="notification-badge <%= "is-hidden" unless current_user_unread_notifications_count.positive? %>"
+                data-controller="notification-badge"
+                data-notification-badge-target="count"><%= current_user_unread_notifications_count %></span>
+        </button>
 
-      <div class="avatar-menu">
-        <div class="avatar-menu-header">
-          <p class="avatar-menu-name"><%= current_user.name %></p>
-          <p class="avatar-menu-email"><%= current_user.email %></p>
+        <div class="notification-panel">
+          <div class="notification-panel-header">
+            <p class="notification-panel-title">Notifications</p>
+            <%= button_to "Mark all as read",
+                  mark_all_read_notifications_path,
+                  method: :patch,
+                  class: "notification-mark-all-read" %>
+          </div>
+
+          <div class="notification-list">
+            <% recent_notifications = current_user_recent_notifications %>
+            <% if recent_notifications.present? %>
+              <% recent_notifications.each do |notification| %>
+                <%= button_to notification_path(notification),
+                      method: :patch,
+                      class: "notification-item #{'notification-item--unread' if notification.read_at.nil?}" do %>
+                  <span class="notification-item-message"><%= notification.message %></span>
+                  <span class="notification-item-meta">
+                    <span class="notification-item-workspace"><%= notification.workspace.name %></span>
+                    <span class="notification-item-time"><%= time_ago_in_words(notification.created_at) %> ago</span>
+                  </span>
+                <% end %>
+              <% end %>
+            <% else %>
+              <p class="notification-empty">No notifications yet.</p>
+            <% end %>
+          </div>
         </div>
+      </div>
 
-        <hr class="avatar-menu-divider">
+      <div class="avatar-dropdown" data-controller="avatar-dropdown">
+        <button class="avatar-trigger"
+                data-action="click->avatar-dropdown#toggle"
+                aria-label="Open user menu"
+                type="button">
+          <% if current_user.avatar_url.present? %>
+            <img src="<%= current_user.avatar_url %>"
+                 alt="<%= current_user.name %>"
+                 class="avatar-photo"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'">
+            <span class="avatar-initials avatar-initials--hidden">
+              <%= current_user.name&.first&.upcase || current_user.email.first.upcase %>
+            </span>
+          <% else %>
+            <span class="avatar-initials"><%= current_user.name&.first&.upcase || current_user.email.first.upcase %></span>
+          <% end %>
+        </button>
 
-        <div class="avatar-menu-actions">
-          <%= link_to "Sign out",
-                sign_out_path,
-                data: { turbo_method: :delete },
-                class: "avatar-menu-sign-out" %>
+        <div class="avatar-menu">
+          <div class="avatar-menu-header">
+            <p class="avatar-menu-name"><%= current_user.name %></p>
+            <p class="avatar-menu-email"><%= current_user.email %></p>
+          </div>
+
+          <hr class="avatar-menu-divider">
+
+          <div class="avatar-menu-actions">
+            <%= link_to "Sign out",
+                  sign_out_path,
+                  data: { turbo_method: :delete },
+                  class: "avatar-menu-sign-out" %>
+          </div>
         </div>
       </div>
     </div>

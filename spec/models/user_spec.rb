@@ -143,6 +143,26 @@ RSpec.describe User, type: :model do
       create(:workspace_membership, user: user, workspace: workspace)
       expect { user.destroy }.to change(WorkspaceMembership, :count).by(-1)
     end
+
+    it "has many notifications" do
+      association = described_class.reflect_on_association(:notifications)
+      expect(association.macro).to eq(:has_many)
+    end
+
+    it "destroys notifications when user is destroyed" do
+      association = described_class.reflect_on_association(:notifications)
+      expect(association.options[:dependent]).to eq(:destroy)
+    end
+
+    it "destroys the user's notifications when the user is destroyed" do
+      user = create(:user)
+      workspace = create(:workspace)
+      app_record = create(:app, workspace: workspace)
+      report = create(:report, app: app_record)
+      create(:notification, user: user, workspace: workspace, report: report)
+
+      expect { user.destroy }.to change(Notification, :count).by(-1)
+    end
   end
 
   describe "database constraints" do

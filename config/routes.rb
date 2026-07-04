@@ -12,6 +12,12 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :notifications, only: [:update] do
+    collection do
+      patch :mark_all_read
+    end
+  end
+
   mount ActionCable.server => "/cable"
 
   root "dashboard#index"
