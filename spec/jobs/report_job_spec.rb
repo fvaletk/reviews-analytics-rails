@@ -128,6 +128,96 @@ RSpec.describe ReportJob, type: :job do
         expect(Notification).to receive(:insert_all).once.and_call_original
         described_class.perform_now(report.id)
       end
+
+      it "broadcasts the unread_count to the collaborator's own notification stream" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{collaborator.id}", { unread_count: 1 })
+      end
+
+      it "broadcasts the unread_count to the admin's own notification stream" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{admin.id}", { unread_count: 1 })
+      end
+
+      it "broadcasts the unread_count to the super_admin's own notification stream" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{super_admin.id}", { unread_count: 1 })
+      end
+    end
+
+    context "when a workspace member already has prior read and unread notifications" do
+      let(:collaborator) { create(:user) }
+      let(:other_report) { create(:report, app: app, generated_by: user) }
+
+      let!(:membership) do
+        create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator)
+      end
+
+      let!(:read_notification) do
+        create(:notification, user: collaborator, workspace: workspace, report: other_report, read_at: 1.day.ago)
+      end
+
+      let!(:unread_notification) do
+        create(:notification, user: collaborator, workspace: workspace, report: other_report)
+      end
+
+      before { described_class.perform_now(report.id) }
+
+      it "broadcasts an unread_count that includes prior unread notifications plus the new one" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{collaborator.id}", { unread_count: 2 })
+      end
+
+      it "does not count the already-read notification" do
+        expect(Notification.unread_count_for(collaborator)).to eq(2)
+      end
+    end
+
+    context "when a workspace member marks all their notifications as read" do
+      let(:collaborator) { create(:user) }
+
+      let!(:membership) do
+        create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator)
+      end
+
+      before { described_class.perform_now(report.id) }
+
+      it "the unread_count drops to 0 once all notifications are marked read" do
+        Notification.where(user: collaborator).update_all(read_at: Time.current)
+
+        expect(Notification.unread_count_for(collaborator)).to eq(0)
+      end
+    end
+
+    context "when one workspace member has unread notifications from an unrelated workspace" do
+      let(:collaborator) { create(:user) }
+      let(:admin) { create(:user) }
+      let(:other_workspace) { create(:workspace) }
+      let(:other_app) { create(:app, workspace: other_workspace) }
+      let(:other_report) { create(:report, app: other_app, generated_by: user) }
+
+      let!(:memberships) do
+        [
+          create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator),
+          create(:workspace_membership, user: admin, workspace: workspace, role: :admin)
+        ]
+      end
+
+      let!(:unrelated_notification) do
+        create(:notification, user: collaborator, workspace: other_workspace, report: other_report)
+      end
+
+      before { described_class.perform_now(report.id) }
+
+      it "includes the collaborator's unrelated unread notification in their own count" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{collaborator.id}", { unread_count: 2 })
+      end
+
+      it "does not leak the collaborator's extra notification into the admin's count" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{admin.id}", { unread_count: 1 })
+      end
     end
 
     context "when ScrapingService raises an error" do
@@ -180,6 +270,13 @@ RSpec.describe ReportJob, type: :job do
 
       it "includes the failure reason in the notification message" do
         expect(Notification.pluck(:message)).to all(include("timeout"))
+      end
+
+      it "broadcasts the unread_count to each affected member's own notification stream" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{collaborator.id}", { unread_count: 1 })
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{admin.id}", { unread_count: 1 })
       end
     end
 

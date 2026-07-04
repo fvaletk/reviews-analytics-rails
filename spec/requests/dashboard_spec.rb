@@ -67,7 +67,7 @@ RSpec.describe "Dashboard", type: :request do
 
         it "shows the workspace name" do
           get root_path
-          expect(response.body).to include(workspace.name)
+          expect(response.body).to include(CGI.escapeHTML(workspace.name))
         end
 
         it "links to the workspace show page" do

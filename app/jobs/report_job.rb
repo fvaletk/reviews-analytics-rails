@@ -68,6 +68,19 @@ class ReportJob < ApplicationJob
     end
 
     Notification.insert_all(notification_records) if notification_records.any?
+
+    user_ids.each do |user_id|
+      broadcast_notification(user_id)
+    end
+  end
+
+  def broadcast_notification(user_id)
+    user = User.find(user_id)
+
+    ActionCable.server.broadcast(
+      "notifications_user_#{user_id}",
+      { unread_count: Notification.unread_count_for(user) }
+    )
   end
 
   def build_review_records(reviews, app_id)
