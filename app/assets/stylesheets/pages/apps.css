@@ -48,3 +48,36 @@
   text-transform: uppercase;
   letter-spacing: var(--tracking-wider);
 }
+
+.report-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.report-actions-primary-form,
+.report-actions-primary-form .btn-primary {
+  width: 100%;
+}
+
+.report-actions-label {
+  margin: 0;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-default);
+  font-family: var(--font-body);
+  font-size: var(--text-sm);
+  color: var(--text-tertiary);
+}
+
+.report-actions-secondary {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.report-actions-secondary-form {
+  flex: 1;
+}
+
+.report-actions-secondary-form .btn-secondary {
+  width: 100%;
+}
