@@ -493,10 +493,6 @@ a:hover {
   color: var(--accent-hover);
 }
 
-.app-show-card {
-  max-width: 640px;
-}
-
 .app-detail-list {
   margin: 0;
   padding: 0;
