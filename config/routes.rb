@@ -15,6 +15,10 @@ Rails.application.routes.draw do
           post :reanalyze
           post :refresh
         end
+        collection do
+          post :reanalyze
+          post :refresh
+        end
       end
     end
   end

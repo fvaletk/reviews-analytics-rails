@@ -31,7 +31,7 @@ class ReportsController < ApplicationController
   end
 
   def reanalyze
-    @app.reports.find(params[:id])
+    @app.reports.find(params[:id]) if params[:id]
     authorize @app, :generate_report?
 
     @report = @app.reports.create!(status: :pending, generated_by: current_user)
@@ -43,7 +43,7 @@ class ReportsController < ApplicationController
   end
 
   def refresh
-    @app.reports.find(params[:id])
+    @app.reports.find(params[:id]) if params[:id]
     authorize @app, :generate_report?
 
     @report = @app.reports.create!(status: :pending, generated_by: current_user)

@@ -185,14 +185,9 @@ RSpec.describe "Reports", type: :request do
   # ---------------------------------------------------------------------------
   # Re-analyze / Refresh button visibility on the app show page
   #
-  # BRA-70 replaced the app show page with a two-column layout in which these
-  # two buttons are unconditional disabled placeholders (no role or report-based
-  # gating) until BRA-71 adds the app-level routes and wires them up for real.
-  # The examples below predate BRA-70 and asserted role/report-based show/hide
-  # behavior that no longer applies — pending until BRA-71 reintroduces
-  # (and this spec re-asserts) the real gating behavior.
-  # FLAG FOR REVIEW: confirm whether BRA-71 should restore admin/super_admin-only
-  # visibility for these buttons, or whether they should stay unconditional.
+  # BRA-71 wires these buttons up to the same `policy(@app).generate_report?`
+  # check that already gates the "Generate Report" button — admin/super_admin
+  # only, with no dependency on whether a completed (or any) report exists.
   # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/:id — Re-analyze existing reviews button visibility" do
     context "when signed in as an admin and a completed report exists" do
@@ -221,16 +216,16 @@ RSpec.describe "Reports", type: :request do
       end
     end
 
-    context "when signed in as an admin but no completed report exists" do
+    context "when signed in as an admin and no completed report exists" do
       before do
         make_member(role: :admin)
         sign_in user
         create(:report, app: the_app, status: :pending)
       end
 
-      pending "hides the Re-analyze existing reviews button (unconditional placeholder pending BRA-71)" do
+      it "shows the Re-analyze existing reviews button" do
         get workspace_app_path(workspace, the_app)
-        expect(response.body).not_to include("Re-analyze existing reviews")
+        expect(response.body).to include("Re-analyze existing reviews")
       end
     end
 
@@ -241,7 +236,7 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :complete)
       end
 
-      pending "hides the Re-analyze existing reviews button (unconditional placeholder pending BRA-71)" do
+      it "hides the Re-analyze existing reviews button" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Re-analyze existing reviews")
       end
@@ -275,16 +270,16 @@ RSpec.describe "Reports", type: :request do
       end
     end
 
-    context "when signed in as an admin but no completed report exists" do
+    context "when signed in as an admin and no completed report exists" do
       before do
         make_member(role: :admin)
         sign_in user
         create(:report, app: the_app, status: :pending)
       end
 
-      pending "hides the Refresh reviews + re-analyze button (unconditional placeholder pending BRA-71)" do
+      it "shows the Refresh reviews + re-analyze button" do
         get workspace_app_path(workspace, the_app)
-        expect(response.body).not_to include("Refresh reviews + re-analyze")
+        expect(response.body).to include("Refresh reviews + re-analyze")
       end
     end
 
@@ -295,7 +290,7 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :complete)
       end
 
-      pending "hides the Refresh reviews + re-analyze button (unconditional placeholder pending BRA-71)" do
+      it "hides the Refresh reviews + re-analyze button" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Refresh reviews + re-analyze")
       end
@@ -417,6 +412,92 @@ RSpec.describe "Reports", type: :request do
         existing_report
         expect {
           post reanalyze_workspace_app_report_path(workspace, the_app, existing_report)
+        }.not_to change(Report, :count)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # POST /workspaces/:workspace_id/apps/:app_id/reports/reanalyze (collection route, no report id)
+  # ---------------------------------------------------------------------------
+  describe "POST /workspaces/:workspace_id/apps/:app_id/reports/reanalyze" do
+    context "when signed in as an admin" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "creates a new Report record" do
+        expect {
+          post reanalyze_workspace_app_reports_path(workspace, the_app)
+        }.to change(Report, :count).by(1)
+      end
+
+      it "sets the new report's status to pending" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.status).to eq("pending")
+      end
+
+      it "sets generated_by to the current user on the new report" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.generated_by).to eq(user)
+      end
+
+      it "enqueues a ReportJob with skip_scraping: true for the new report" do
+        expect {
+          post reanalyze_workspace_app_reports_path(workspace, the_app)
+        }.to have_enqueued_job(ReportJob).with { |report_id, **kwargs|
+          expect(report_id).to eq(Report.last.id)
+          expect(kwargs).to eq(skip_scraping: true)
+        }
+      end
+
+      it "returns a turbo_stream response" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      end
+    end
+
+    context "when signed in as a super_admin" do
+      before do
+        make_member(role: :super_admin)
+        sign_in user
+      end
+
+      it "creates a new Report record" do
+        expect {
+          post reanalyze_workspace_app_reports_path(workspace, the_app)
+        }.to change(Report, :count).by(1)
+      end
+    end
+
+    context "when signed in as a collaborator" do
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "returns 403 Forbidden" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app)
+        expect(response).to have_http_status(:forbidden)
+      end
+
+      it "does not create a new Report record" do
+        expect {
+          post reanalyze_workspace_app_reports_path(workspace, the_app)
+        }.not_to change(Report, :count)
+      end
+    end
+
+    context "when not signed in" do
+      it "redirects to sign in" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app)
+        expect(response).to redirect_to(sign_in_path)
+      end
+
+      it "does not create a new Report record" do
+        expect {
+          post reanalyze_workspace_app_reports_path(workspace, the_app)
         }.not_to change(Report, :count)
       end
     end
@@ -636,6 +717,90 @@ RSpec.describe "Reports", type: :request do
         existing_report
         expect {
           post refresh_workspace_app_report_path(workspace, the_app, existing_report)
+        }.not_to change(Report, :count)
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
+  # POST /workspaces/:workspace_id/apps/:app_id/reports/refresh (collection route, no report id)
+  # ---------------------------------------------------------------------------
+  describe "POST /workspaces/:workspace_id/apps/:app_id/reports/refresh" do
+    context "when signed in as an admin" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "creates a new Report record" do
+        expect {
+          post refresh_workspace_app_reports_path(workspace, the_app)
+        }.to change(Report, :count).by(1)
+      end
+
+      it "sets the new report's status to pending" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.status).to eq("pending")
+      end
+
+      it "sets generated_by to the current user on the new report" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.generated_by).to eq(user)
+      end
+
+      it "enqueues a ReportJob with the new report's id and no skip_scraping kwarg" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        report = Report.last
+        enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j["job_class"] == "ReportJob" }
+        expect(enqueued["arguments"]).to eq([report.id])
+      end
+
+      it "returns a turbo_stream response" do
+        post refresh_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      end
+    end
+
+    context "when signed in as a super_admin" do
+      before do
+        make_member(role: :super_admin)
+        sign_in user
+      end
+
+      it "creates a new Report record" do
+        expect {
+          post refresh_workspace_app_reports_path(workspace, the_app)
+        }.to change(Report, :count).by(1)
+      end
+    end
+
+    context "when signed in as a collaborator" do
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "returns 403 Forbidden" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        expect(response).to have_http_status(:forbidden)
+      end
+
+      it "does not create a new Report record" do
+        expect {
+          post refresh_workspace_app_reports_path(workspace, the_app)
+        }.not_to change(Report, :count)
+      end
+    end
+
+    context "when not signed in" do
+      it "redirects to sign in" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        expect(response).to redirect_to(sign_in_path)
+      end
+
+      it "does not create a new Report record" do
+        expect {
+          post refresh_workspace_app_reports_path(workspace, the_app)
         }.not_to change(Report, :count)
       end
     end

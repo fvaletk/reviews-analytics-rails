@@ -92,8 +92,16 @@
         </div>
 
         <div class="action-rail__secondary-group">
-          <button class="action-rail__secondary-btn" disabled>Re-analyze existing reviews</button>
-          <button class="action-rail__secondary-btn" disabled>Refresh reviews + re-analyze</button>
+          <% if policy(@app).generate_report? %>
+            <%= button_to "Re-analyze existing reviews",
+                  reanalyze_workspace_app_reports_path(@workspace, @app),
+                  method: :post,
+                  class: "action-rail__secondary-btn" %>
+            <%= button_to "Refresh reviews + re-analyze",
+                  refresh_workspace_app_reports_path(@workspace, @app),
+                  method: :post,
+                  class: "action-rail__secondary-btn" %>
+          <% end %>
         </div>
       </div>
     </div>

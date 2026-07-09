@@ -193,6 +193,10 @@
   gap: var(--space-3);
 }
 
+.action-rail__secondary-group form {
+  width: 100%;
+}
+
 .action-rail__secondary-btn {
   width: 100%;
   text-align: left;
@@ -205,6 +209,15 @@
   padding: var(--space-3) var(--space-4);
   border-radius: var(--radius-md);
   border: 1px solid var(--border-default);
+  cursor: pointer;
+  transition: border-color var(--transition-base);
+}
+
+.action-rail__secondary-btn:hover {
+  border-color: var(--text-secondary);
+}
+
+.action-rail__secondary-btn:disabled {
   cursor: not-allowed;
   opacity: 0.5;
 }
