@@ -183,7 +183,16 @@ RSpec.describe "Reports", type: :request do
   end
 
   # ---------------------------------------------------------------------------
-  # Re-analyze existing reviews button visibility on the app show page
+  # Re-analyze / Refresh button visibility on the app show page
+  #
+  # BRA-70 replaced the app show page with a two-column layout in which these
+  # two buttons are unconditional disabled placeholders (no role or report-based
+  # gating) until BRA-71 adds the app-level routes and wires them up for real.
+  # The examples below predate BRA-70 and asserted role/report-based show/hide
+  # behavior that no longer applies — pending until BRA-71 reintroduces
+  # (and this spec re-asserts) the real gating behavior.
+  # FLAG FOR REVIEW: confirm whether BRA-71 should restore admin/super_admin-only
+  # visibility for these buttons, or whether they should stay unconditional.
   # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/:id — Re-analyze existing reviews button visibility" do
     context "when signed in as an admin and a completed report exists" do
@@ -219,7 +228,7 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :pending)
       end
 
-      it "hides the Re-analyze existing reviews button" do
+      pending "hides the Re-analyze existing reviews button (unconditional placeholder pending BRA-71)" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Re-analyze existing reviews")
       end
@@ -232,16 +241,13 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :complete)
       end
 
-      it "hides the Re-analyze existing reviews button" do
+      pending "hides the Re-analyze existing reviews button (unconditional placeholder pending BRA-71)" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Re-analyze existing reviews")
       end
     end
   end
 
-  # ---------------------------------------------------------------------------
-  # Refresh reviews + re-analyze button visibility on the app show page
-  # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/:id — Refresh reviews + re-analyze button visibility" do
     context "when signed in as an admin and a completed report exists" do
       before do
@@ -276,7 +282,7 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :pending)
       end
 
-      it "hides the Refresh reviews + re-analyze button" do
+      pending "hides the Refresh reviews + re-analyze button (unconditional placeholder pending BRA-71)" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Refresh reviews + re-analyze")
       end
@@ -289,7 +295,7 @@ RSpec.describe "Reports", type: :request do
         create(:report, app: the_app, status: :complete)
       end
 
-      it "hides the Refresh reviews + re-analyze button" do
+      pending "hides the Refresh reviews + re-analyze button (unconditional placeholder pending BRA-71)" do
         get workspace_app_path(workspace, the_app)
         expect(response.body).not_to include("Refresh reviews + re-analyze")
       end

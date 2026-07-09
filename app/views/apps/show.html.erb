@@ -92,12 +92,8 @@
         </div>
 
         <div class="action-rail__secondary-group">
-          <% if policy(@app).reanalyze_report? && @latest_report.present? %>
-            <button class="action-rail__secondary-btn" disabled>Re-analyze existing reviews</button>
-          <% end %>
-          <% if policy(@app).reanalyze_report? && @latest_report.present? %>
-            <button class="action-rail__secondary-btn" disabled>Refresh reviews + re-analyze</button>
-          <% end %>
+          <button class="action-rail__secondary-btn" disabled>Re-analyze existing reviews</button>
+          <button class="action-rail__secondary-btn" disabled>Refresh reviews + re-analyze</button>
         </div>
       </div>
     </div>

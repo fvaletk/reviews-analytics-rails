@@ -31,10 +31,6 @@ class AppPolicy < ApplicationPolicy
     admin? || super_admin?
   end
 
-  def reanalyze_report?
-    admin? || super_admin?
-  end
-
   class Scope < Scope
     def resolve
       scope.joins(workspace: :workspace_memberships)
