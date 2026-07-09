@@ -1,90 +1,105 @@
 <% content_for :title, "#{@app.name} — #{@workspace.name} — Reviews Analytics" %>
 
 <main class="page-container">
-  <header class="page-header">
-    <div class="flex items-center">
-      <%= link_to "← #{@workspace.name}", workspace_path(@workspace), class: "app-show-back-link" %>
-    </div>
-    <div class="section-header app-show-title-row">
-      <h1 class="page-title"><%= @app.name %></h1>
-      <%= link_to "View Report History", workspace_app_reports_path(@workspace, @app), class: "btn-secondary" %>
-    </div>
-  </header>
+  <div class="app-show">
+    <%= link_to "← #{@workspace.name}", workspace_path(@workspace), class: "app-show__breadcrumb" %>
 
-  <div class="section-header app-show-report-header">
-    <div id="report_status" class="report-status"></div>
-    <% if policy(@app).generate_report? %>
-      <div class="card report-actions">
-        <%= button_to "Generate Report",
-              workspace_app_reports_path(@workspace, @app),
-              method: :post,
-              class: "btn-primary",
-              form_class: "report-actions-primary-form" %>
-
-        <% if @latest_completed_report.present? %>
-          <p class="report-actions-label">Already have reviews?</p>
-          <div class="report-actions-secondary">
-            <%= button_to "Re-analyze existing reviews",
-                  reanalyze_workspace_app_report_path(@workspace, @app, @latest_completed_report),
-                  method: :post,
-                  class: "btn-secondary",
-                  form_class: "report-actions-secondary-form" %>
-            <%= button_to "Refresh reviews + re-analyze",
-                  refresh_workspace_app_report_path(@workspace, @app, @latest_completed_report),
-                  method: :post,
-                  class: "btn-secondary",
-                  form_class: "report-actions-secondary-form" %>
-          </div>
-        <% end %>
+    <div class="app-show__header">
+      <div class="app-show__icon"><%= @app.name.first %></div>
+      <div class="app-show__identity">
+        <h1 class="app-show__name"><%= @app.name %></h1>
+        <div class="app-show__meta">
+          <% if @app.app_store_id.present? %>
+            <span class="workspace-app-store-tag">App Store</span>
+          <% end %>
+          <% if @app.play_store_id.present? %>
+            <span class="workspace-app-store-tag">Play Store</span>
+          <% end %>
+          <span class="app-show__meta-date">Added <%= @app.created_at.strftime("%-d %b %Y") %></span>
+        </div>
       </div>
-    <% end %>
-  </div>
+      <%= link_to "View Report History →", workspace_app_reports_path(@workspace, @app), class: "btn-secondary" %>
+    </div>
 
-  <div class="page-body">
-    <div class="card app-show-card">
-      <h2 class="card-title">Store Details</h2>
+    <hr class="app-show__divider">
 
-      <dl class="app-detail-list">
-        <% if @app.app_store_id.present? %>
-          <div class="app-detail-row">
-            <dt class="app-detail-label">App Store</dt>
-            <dd class="app-detail-value">
-              <%= link_to "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
-                    "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
-                    target: "_blank",
-                    rel: "noopener noreferrer",
-                    class: "app-detail-link" %>
+    <div class="app-show__body">
+      <div class="app-show__details">
+        <h2 class="app-show__section-title">Store Details</h2>
+        <dl class="store-detail-grid">
+          <% if @app.app_store_id.present? %>
+            <div class="store-detail-row">
+              <dt class="store-detail-label">App Store URL</dt>
+              <dd class="store-detail-value">
+                <%= link_to "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
+                      "https://apps.apple.com/#{@app.app_store_country}/app/id#{@app.app_store_id}",
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      class: "store-detail-link" %>
+              </dd>
+            </div>
+          <% end %>
+
+          <% if @app.play_store_id.present? %>
+            <div class="store-detail-row">
+              <dt class="store-detail-label">Play Store URL</dt>
+              <dd class="store-detail-value">
+                <%= link_to "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
+                      "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
+                      target: "_blank",
+                      rel: "noopener noreferrer",
+                      class: "store-detail-link" %>
+              </dd>
+            </div>
+          <% end %>
+
+          <div class="store-detail-row">
+            <dt class="store-detail-label">Created by</dt>
+            <dd class="store-detail-value"><%= @app.created_by.name.presence || @app.created_by.email %></dd>
+          </div>
+
+          <div class="store-detail-row">
+            <dt class="store-detail-label">Created</dt>
+            <dd class="store-detail-value"><%= @app.created_at.strftime("%-d %b %Y") %></dd>
+          </div>
+
+          <div class="store-detail-row">
+            <dt class="store-detail-label">Last report</dt>
+            <dd class="store-detail-value">
+              <% if @latest_report.present? %>
+                <%= @latest_report.created_at.strftime("%-d %b %Y") %>
+              <% else %>
+                No reports yet
+              <% end %>
             </dd>
           </div>
+        </dl>
+      </div>
+
+      <div class="action-rail">
+        <div class="action-rail__heading">Generate analysis</div>
+        <p class="action-rail__subtext">Build a fresh report from the latest reviews.</p>
+
+        <% if policy(@app).generate_report? %>
+          <%= button_to "Generate Report",
+                workspace_app_reports_path(@workspace, @app),
+                method: :post,
+                class: "btn-primary action-rail__primary" %>
         <% end %>
 
-        <% if @app.play_store_id.present? %>
-          <div class="app-detail-row">
-            <dt class="app-detail-label">Play Store</dt>
-            <dd class="app-detail-value">
-              <%= link_to "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
-                    "https://play.google.com/store/apps/details?id=#{@app.play_store_id}",
-                    target: "_blank",
-                    rel: "noopener noreferrer",
-                    class: "app-detail-link" %>
-            </dd>
-          </div>
-        <% end %>
-
-        <div class="app-detail-row">
-          <dt class="app-detail-label">Created By</dt>
-          <dd class="app-detail-value app-detail-meta">
-            <%= @app.created_by.name.presence || @app.created_by.email %>
-          </dd>
+        <div class="action-rail__divider">
+          <span class="action-rail__divider-label">Already have reviews?</span>
         </div>
 
-        <div class="app-detail-row">
-          <dt class="app-detail-label">Created</dt>
-          <dd class="app-detail-value app-detail-meta">
-            <%= @app.created_at.strftime("%-d %b %Y") %>
-          </dd>
+        <div class="action-rail__secondary-group">
+          <% if policy(@app).reanalyze_report? && @latest_report.present? %>
+            <button class="action-rail__secondary-btn" disabled>Re-analyze existing reviews</button>
+          <% end %>
+          <% if policy(@app).reanalyze_report? && @latest_report.present? %>
+            <button class="action-rail__secondary-btn" disabled>Refresh reviews + re-analyze</button>
+          <% end %>
         </div>
-      </dl>
+      </div>
     </div>
   </div>
 </main>

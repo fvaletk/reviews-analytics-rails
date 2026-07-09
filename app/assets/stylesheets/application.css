@@ -13,9 +13,11 @@
   --bg-surface:     #141414;
   --bg-elevated:    #1C1C1C;
   --bg-subtle:      #222222;
+  --surface-subtle: #222222;
 
   --border-default: #2A2A2A;
   --border-strong:  #3D3D3D;
+  --border-subtle:  #2A2A2A;
 
   --text-primary:   #F0EBE3;
   --text-secondary: #9A9080;
@@ -47,9 +49,11 @@
   --bg-surface:     #FDFAF5;
   --bg-elevated:    #FFFFFF;
   --bg-subtle:      #EDE8DE;
+  --surface-subtle: #EDE8DE;
 
   --border-default: #D8D0C4;
   --border-strong:  #B8B0A4;
+  --border-subtle:  #D8D0C4;
 
   --text-primary:   #1A1714;
   --text-secondary: #6B6460;
