@@ -49,6 +49,10 @@
   letter-spacing: var(--tracking-wider);
 }
 
+.report-status-label--failed {
+  color: var(--critical);
+}
+
 .report-actions {
   display: flex;
   flex-direction: column;

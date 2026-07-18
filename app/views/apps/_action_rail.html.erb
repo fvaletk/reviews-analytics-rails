@@ -1,0 +1,46 @@
+<div id="report_status" class="action-rail"
+     data-controller="report-status"
+     data-report-status-had-completed-report-value="<%= @latest_report.present? %>"
+     <% if @active_report.present? %>data-report-status-report-id-value="<%= @active_report.id %>"<% end %>>
+  <div class="action-rail__heading">Generate analysis</div>
+  <p class="action-rail__subtext">Build a fresh report from the latest reviews.</p>
+
+  <div class="report-status" data-report-status-target="statusIndicator">
+    <% if @active_report.present? %>
+      <span class="status-dot is-active report-status-dot"></span>
+      <span class="report-status-label" data-report-status-target="label">Generating&hellip;</span>
+    <% end %>
+  </div>
+
+  <% if policy(@app).generate_report? %>
+    <%= button_to "Generate Report",
+          workspace_app_reports_path(@workspace, @app),
+          method: :post,
+          class: "btn-primary action-rail__primary",
+          disabled: @active_report.present?,
+          data: { report_status_target: "primaryButton" } %>
+  <% end %>
+
+  <div class="action-rail__divider">
+    <span class="action-rail__divider-label">Already have reviews?</span>
+  </div>
+
+  <div class="action-rail__secondary-group">
+    <% if policy(@app).generate_report? %>
+      <%= button_to "Re-analyze existing reviews",
+            reanalyze_workspace_app_reports_path(@workspace, @app),
+            method: :post,
+            class: "action-rail__secondary-btn",
+            disabled: @latest_report.blank? || @active_report.present?,
+            title: (@latest_report.blank? ? "Generate a report first" : nil),
+            data: { report_status_target: "button" } %>
+      <%= button_to "Refresh reviews + re-analyze",
+            refresh_workspace_app_reports_path(@workspace, @app),
+            method: :post,
+            class: "action-rail__secondary-btn",
+            disabled: @latest_report.blank? || @active_report.present?,
+            title: (@latest_report.blank? ? "Generate a report first" : nil),
+            data: { report_status_target: "button" } %>
+    <% end %>
+  </div>
+</div>

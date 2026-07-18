@@ -67,6 +67,37 @@ RSpec.describe "Reports", type: :request do
         post workspace_app_reports_path(workspace, the_app)
         expect(response.body).to include("Generating")
       end
+
+      # BRA-75: the turbo_stream response must contain a real #report_status
+      # element (the original bug was a missing turbo_stream target), and the
+      # buttons rendered inside it must already be disabled.
+      it "includes a #report_status element in the turbo_stream response body" do
+        post workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+        expect(wrapper).to be_present
+      end
+
+      it "renders all three buttons disabled inside the turbo_stream #report_status element" do
+        post workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        buttons = Nokogiri::HTML::Document.parse(response.body).css("#report_status button")
+        expect(buttons.size).to eq(3)
+        expect(buttons.all? { |button| button["disabled"].present? }).to be true
+      end
+
+      it "sets data-report-status-had-completed-report-value to false on a first-ever report attempt" do
+        post workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+        expect(wrapper["data-report-status-had-completed-report-value"]).to eq("false")
+      end
+
+      context "when a completed report already exists" do
+        it "sets data-report-status-had-completed-report-value to true" do
+          create(:report, app: the_app, status: :complete)
+          post workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+          wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+          expect(wrapper["data-report-status-had-completed-report-value"]).to eq("true")
+        end
+      end
     end
 
     context "when signed in as a super_admin" do
@@ -456,6 +487,21 @@ RSpec.describe "Reports", type: :request do
         post reanalyze_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
         expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
       end
+
+      # BRA-75
+      it "renders all three buttons disabled inside a #report_status element in the turbo_stream response" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        buttons = Nokogiri::HTML::Document.parse(response.body).css("#report_status button")
+        expect(buttons.size).to eq(3)
+        expect(buttons.all? { |button| button["disabled"].present? }).to be true
+      end
+
+      it "sets data-report-status-had-completed-report-value to true when a completed report already existed" do
+        create(:report, app: the_app, status: :complete)
+        post reanalyze_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+        expect(wrapper["data-report-status-had-completed-report-value"]).to eq("true")
+      end
     end
 
     context "when signed in as a super_admin" do
@@ -758,6 +804,21 @@ RSpec.describe "Reports", type: :request do
       it "returns a turbo_stream response" do
         post refresh_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
         expect(response.media_type).to eq(Mime[:turbo_stream].to_s)
+      end
+
+      # BRA-75
+      it "renders all three buttons disabled inside a #report_status element in the turbo_stream response" do
+        post refresh_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        buttons = Nokogiri::HTML::Document.parse(response.body).css("#report_status button")
+        expect(buttons.size).to eq(3)
+        expect(buttons.all? { |button| button["disabled"].present? }).to be true
+      end
+
+      it "sets data-report-status-had-completed-report-value to true when a completed report already existed" do
+        create(:report, app: the_app, status: :complete)
+        post refresh_workspace_app_reports_path(workspace, the_app), as: :turbo_stream
+        wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+        expect(wrapper["data-report-status-had-completed-report-value"]).to eq("true")
       end
     end
 

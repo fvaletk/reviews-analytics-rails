@@ -76,38 +76,7 @@
         </dl>
       </div>
 
-      <div class="action-rail">
-        <div class="action-rail__heading">Generate analysis</div>
-        <p class="action-rail__subtext">Build a fresh report from the latest reviews.</p>
-
-        <% if policy(@app).generate_report? %>
-          <%= button_to "Generate Report",
-                workspace_app_reports_path(@workspace, @app),
-                method: :post,
-                class: "btn-primary action-rail__primary" %>
-        <% end %>
-
-        <div class="action-rail__divider">
-          <span class="action-rail__divider-label">Already have reviews?</span>
-        </div>
-
-        <div class="action-rail__secondary-group">
-          <% if policy(@app).generate_report? %>
-            <%= button_to "Re-analyze existing reviews",
-                  reanalyze_workspace_app_reports_path(@workspace, @app),
-                  method: :post,
-                  class: "action-rail__secondary-btn",
-                  disabled: @latest_report.blank?,
-                  title: (@latest_report.blank? ? "Generate a report first" : nil) %>
-            <%= button_to "Refresh reviews + re-analyze",
-                  refresh_workspace_app_reports_path(@workspace, @app),
-                  method: :post,
-                  class: "action-rail__secondary-btn",
-                  disabled: @latest_report.blank?,
-                  title: (@latest_report.blank? ? "Generate a report first" : nil) %>
-          <% end %>
-        </div>
-      </div>
+      <%= render "apps/action_rail" %>
     </div>
   </div>
 </main>

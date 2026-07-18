@@ -8,6 +8,7 @@ class AppsController < ApplicationController
     @app = @workspace.apps.find(params[:id])
     authorize @app
     @latest_report = @app.reports.complete.order(created_at: :desc).first
+    @active_report = @app.reports.where(status: [:pending, :fetching, :analyzing]).order(created_at: :desc).first
   end
 
   def new

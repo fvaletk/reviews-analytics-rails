@@ -20,6 +20,8 @@ class ReportsController < ApplicationController
     @report = @app.reports.create!(status: :pending, generated_by: current_user)
     ReportJob.perform_later(@report.id)
 
+    set_report_status_locals
+
     respond_to do |format|
       format.turbo_stream
     end
@@ -37,6 +39,8 @@ class ReportsController < ApplicationController
     @report = @app.reports.create!(status: :pending, generated_by: current_user)
     ReportJob.perform_later(@report.id, skip_scraping: true)
 
+    set_report_status_locals
+
     respond_to do |format|
       format.turbo_stream { render :create }
     end
@@ -49,12 +53,19 @@ class ReportsController < ApplicationController
     @report = @app.reports.create!(status: :pending, generated_by: current_user)
     ReportJob.perform_later(@report.id)
 
+    set_report_status_locals
+
     respond_to do |format|
       format.turbo_stream { render :create }
     end
   end
 
   private
+
+  def set_report_status_locals
+    @active_report = @report
+    @latest_report = @app.reports.complete.order(created_at: :desc).first
+  end
 
   def set_workspace
     @workspace = Workspace.joins(:workspace_memberships)

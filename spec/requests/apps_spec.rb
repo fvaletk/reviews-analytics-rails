@@ -163,10 +163,125 @@ RSpec.describe "Apps", type: :request do
         expect(button["disabled"]).to be_nil
       end
 
+      it "renders 'Generate Report' without the disabled attribute" do
+        get workspace_app_path(workspace, the_app)
+        button = find_button(response.body, "Generate Report")
+        expect(button["disabled"]).to be_nil
+      end
+
       it "does not render the disabled explanation title" do
         get workspace_app_path(workspace, the_app)
         button = find_button(response.body, "Re-analyze existing reviews")
         expect(button["title"]).to be_nil
+      end
+    end
+
+    # -------------------------------------------------------------------------
+    # BRA-75: all three buttons disabled while a report is actively generating
+    # -------------------------------------------------------------------------
+    context "when the app has a report actively generating (BRA-75)" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      %i[pending fetching analyzing].each do |in_progress_status|
+        context "and the active report's status is #{in_progress_status}" do
+          before { create(:report, app: the_app, status: in_progress_status) }
+
+          it "renders 'Generate Report' as disabled" do
+            get workspace_app_path(workspace, the_app)
+            button = find_button(response.body, "Generate Report")
+            expect(button["disabled"]).to be_present
+          end
+
+          it "renders 'Re-analyze existing reviews' as disabled" do
+            get workspace_app_path(workspace, the_app)
+            button = find_button(response.body, "Re-analyze existing reviews")
+            expect(button["disabled"]).to be_present
+          end
+
+          it "renders 'Refresh reviews + re-analyze' as disabled" do
+            get workspace_app_path(workspace, the_app)
+            button = find_button(response.body, "Refresh reviews + re-analyze")
+            expect(button["disabled"]).to be_present
+          end
+        end
+      end
+
+      context "when a report is in progress and a completed report already exists" do
+        before do
+          create(:report, app: the_app, status: :complete)
+          create(:report, app: the_app, status: :analyzing)
+        end
+
+        it "renders all three buttons as disabled (in-progress overrides the completed history)" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_button(response.body, "Generate Report")["disabled"]).to be_present
+          expect(find_button(response.body, "Re-analyze existing reviews")["disabled"]).to be_present
+          expect(find_button(response.body, "Refresh reviews + re-analyze")["disabled"]).to be_present
+        end
+      end
+
+      context "when a report is in progress and NO completed report has ever existed (combined BRA-74 OR BRA-75)" do
+        before { create(:report, app: the_app, status: :fetching) }
+
+        it "renders all three buttons as disabled" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_button(response.body, "Generate Report")["disabled"]).to be_present
+          expect(find_button(response.body, "Re-analyze existing reviews")["disabled"]).to be_present
+          expect(find_button(response.body, "Refresh reviews + re-analyze")["disabled"]).to be_present
+        end
+      end
+
+      context "when refreshing the page mid-generation (server-rendered from DB, not just the live channel)" do
+        before { create(:report, app: the_app, status: :fetching) }
+
+        it "shows the buttons already disabled on a plain GET, with no turbo_stream/channel event involved" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_button(response.body, "Generate Report")["disabled"]).to be_present
+        end
+
+        it "still exposes an in-progress report-id on the wrapper for the channel subscription to attach to" do
+          active_report = the_app.reports.order(:created_at).last
+          get workspace_app_path(workspace, the_app)
+          wrapper = Nokogiri::HTML::Document.parse(response.body).at_css("#report_status")
+          expect(wrapper["data-report-status-report-id-value"]).to eq(active_report.id.to_s)
+        end
+      end
+    end
+
+    # -------------------------------------------------------------------------
+    # BRA-75: data-report-status-had-completed-report-value drives the
+    # JS-only failed-state re-enable logic (Stimulus). Only the server-rendered
+    # value itself is testable here.
+    # -------------------------------------------------------------------------
+    context "data-report-status-had-completed-report-value attribute" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      def report_status_wrapper(body)
+        Nokogiri::HTML::Document.parse(body).at_css("#report_status")
+      end
+
+      context "when a completed report already exists" do
+        before { create(:report, app: the_app, status: :complete) }
+
+        it "is set to true" do
+          get workspace_app_path(workspace, the_app)
+          wrapper = report_status_wrapper(response.body)
+          expect(wrapper["data-report-status-had-completed-report-value"]).to eq("true")
+        end
+      end
+
+      context "when no completed report has ever existed" do
+        it "is set to false" do
+          get workspace_app_path(workspace, the_app)
+          wrapper = report_status_wrapper(response.body)
+          expect(wrapper["data-report-status-had-completed-report-value"]).to eq("false")
+        end
       end
     end
 
