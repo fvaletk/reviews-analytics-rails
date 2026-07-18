@@ -89,6 +89,33 @@ RSpec.describe "Notification bell", type: :request do
         get root_path
         expect(response.body).to include("ago")
       end
+
+      # -------------------------------------------------------------------
+      # BRA-76: the list container/empty-state need stable ids so live
+      # Turbo Stream broadcasts (broadcast_remove_to / broadcast_prepend_to)
+      # can target them without a full page reload.
+      # -------------------------------------------------------------------
+      it "renders the list container with id=notification_list" do
+        get root_path
+        expect(response.body).to include('id="notification_list"')
+      end
+
+      # -------------------------------------------------------------------
+      # BRA-76: the item must be rendered from the shared
+      # notifications/notification partial — proven here by asserting the
+      # item is wired to a real, persisted notification's notification_path
+      # (not an in-memory hash without an id), matching exactly what the
+      # partial itself produces.
+      # -------------------------------------------------------------------
+      it "wires the notification item's form action to the real, persisted notification_path" do
+        get root_path
+        expect(response.body).to include(%(action="#{notification_path(notification)}"))
+      end
+
+      it "renders the unread notification with the notification-item--unread class, as the partial does" do
+        get root_path
+        expect(response.body).to include("notification-item notification-item--unread")
+      end
     end
 
     context "when the user has more than 10 notifications" do
@@ -117,6 +144,13 @@ RSpec.describe "Notification bell", type: :request do
       it "renders the empty state message" do
         get root_path
         expect(response.body).to include("No notifications yet.")
+      end
+
+      # BRA-76: the empty-state element needs id=notification_empty so a
+      # live-broadcast notification's Turbo Stream remove action can target it.
+      it "renders the empty state paragraph with id=notification_empty" do
+        get root_path
+        expect(response.body).to include('id="notification_empty"')
       end
     end
   end

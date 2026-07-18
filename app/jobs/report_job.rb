@@ -90,19 +90,42 @@ class ReportJob < ApplicationJob
       }
     end
 
-    Notification.insert_all(notification_records) if notification_records.any?
+    return if notification_records.empty?
+
+    Notification.insert_all(notification_records)
+
+    # insert_all bypasses callbacks and returns no model instances, but the
+    # broadcast partial needs a real persisted id (for notification_path).
+    # Every row in this batch shares the same `now` timestamp, so this scopes
+    # cleanly to exactly the rows just inserted.
+    persisted_notifications = Notification.where(report_id: report.id, created_at: now).index_by(&:user_id)
 
     user_ids.each do |user_id|
-      broadcast_notification(user_id)
+      broadcast_notification(user_id, persisted_notifications[user_id])
     end
   end
 
-  def broadcast_notification(user_id)
+  def broadcast_notification(user_id, notification)
     user = User.find(user_id)
 
     ActionCable.server.broadcast(
       "notifications_user_#{user_id}",
       { unread_count: Notification.unread_count_for(user) }
+    )
+
+    return unless notification
+
+    # Remove the "No notifications yet." empty-state element (if present)
+    # before prepending the first live notification, so the two don't
+    # render side by side.
+    Turbo::StreamsChannel.broadcast_remove_to(user, :notifications, target: "notification_empty")
+
+    Turbo::StreamsChannel.broadcast_prepend_to(
+      user,
+      :notifications,
+      target: "notification_list",
+      partial: "notifications/notification",
+      locals: { notification: notification }
     )
   end
 

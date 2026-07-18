@@ -177,6 +177,99 @@ RSpec.describe ReportJob, type: :job do
       end
     end
 
+    context "broadcasting the live notification via Turbo Streams (BRA-76)" do
+      let(:collaborator) { create(:user) }
+      let(:admin) { create(:user) }
+
+      let!(:memberships) do
+        [
+          create(:workspace_membership, user: collaborator, workspace: workspace, role: :collaborator),
+          create(:workspace_membership, user: admin, workspace: workspace, role: :admin)
+        ]
+      end
+
+      before do
+        allow(Turbo::StreamsChannel).to receive(:broadcast_remove_to)
+        allow(Turbo::StreamsChannel).to receive(:broadcast_prepend_to)
+        described_class.perform_now(report.id)
+      end
+
+      it "removes the empty-state element on the collaborator's notification stream" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_remove_to)
+          .with(collaborator, :notifications, target: "notification_empty")
+      end
+
+      it "removes the empty-state element on the admin's notification stream" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_remove_to)
+          .with(admin, :notifications, target: "notification_empty")
+      end
+
+      it "prepends the notification partial to the notification_list target on the collaborator's stream" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          collaborator,
+          :notifications,
+          target: "notification_list",
+          partial: "notifications/notification",
+          locals: { notification: anything }
+        )
+      end
+
+      it "prepends the notification partial to the notification_list target on the admin's stream" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          admin,
+          :notifications,
+          target: "notification_list",
+          partial: "notifications/notification",
+          locals: { notification: anything }
+        )
+      end
+
+      it "broadcasts a notification with a real persisted id, not an in-memory hash" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          collaborator,
+          :notifications,
+          hash_including(
+            locals: { notification: satisfy { |n| n.is_a?(Notification) && n.persisted? && n.id.present? } }
+          )
+        )
+      end
+
+      it "broadcasts the collaborator's own persisted notification record" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          collaborator,
+          :notifications,
+          hash_including(
+            locals: { notification: satisfy { |n| n.user_id == collaborator.id } }
+          )
+        )
+      end
+
+      it "broadcasts a notification with the correct message" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          collaborator,
+          :notifications,
+          hash_including(
+            locals: { notification: satisfy { |n| n.message == "Report for #{app.name} is ready." } }
+          )
+        )
+      end
+
+      it "broadcasts a notification with the correct report_id" do
+        expect(Turbo::StreamsChannel).to have_received(:broadcast_prepend_to).with(
+          collaborator,
+          :notifications,
+          hash_including(
+            locals: { notification: satisfy { |n| n.report_id == report.id } }
+          )
+        )
+      end
+
+      it "still broadcasts the unread_count on the same ActionCable stream (badge behavior unchanged)" do
+        expect(ActionCable.server).to have_received(:broadcast)
+          .with("notifications_user_#{collaborator.id}", { unread_count: 1 })
+      end
+    end
+
     context "when a workspace member already has prior read and unread notifications" do
       let(:collaborator) { create(:user) }
       let(:other_report) { create(:report, app: app, generated_by: user) }

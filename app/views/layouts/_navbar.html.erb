@@ -1,4 +1,6 @@
 <nav class="navbar">
+  <%= turbo_stream_from current_user, :notifications %>
+
   <div class="navbar-inner">
     <%= link_to "Reviews Analytics", root_path, class: "navbar-logo" %>
 
@@ -26,22 +28,12 @@
                   class: "notification-mark-all-read" %>
           </div>
 
-          <div class="notification-list">
+          <div class="notification-list" id="notification_list">
             <% recent_notifications = current_user_recent_notifications %>
             <% if recent_notifications.present? %>
-              <% recent_notifications.each do |notification| %>
-                <%= button_to notification_path(notification),
-                      method: :patch,
-                      class: "notification-item #{'notification-item--unread' if notification.read_at.nil?}" do %>
-                  <span class="notification-item-message"><%= notification.message %></span>
-                  <span class="notification-item-meta">
-                    <span class="notification-item-workspace"><%= notification.workspace.name %></span>
-                    <span class="notification-item-time"><%= time_ago_in_words(notification.created_at) %> ago</span>
-                  </span>
-                <% end %>
-              <% end %>
+              <%= render partial: "notifications/notification", collection: recent_notifications %>
             <% else %>
-              <p class="notification-empty">No notifications yet.</p>
+              <p class="notification-empty" id="notification_empty">No notifications yet.</p>
             <% end %>
           </div>
         </div>

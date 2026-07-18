@@ -1,0 +1,9 @@
+<%= button_to notification_path(notification),
+      method: :patch,
+      class: "notification-item #{'notification-item--unread' if notification.read_at.nil?}" do %>
+  <span class="notification-item-message"><%= notification.message %></span>
+  <span class="notification-item-meta">
+    <span class="notification-item-workspace"><%= notification.workspace.name %></span>
+    <span class="notification-item-time"><%= time_ago_in_words(notification.created_at) %> ago</span>
+  </span>
+<% end %>
