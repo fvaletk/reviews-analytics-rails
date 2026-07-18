@@ -96,11 +96,15 @@
             <%= button_to "Re-analyze existing reviews",
                   reanalyze_workspace_app_reports_path(@workspace, @app),
                   method: :post,
-                  class: "action-rail__secondary-btn" %>
+                  class: "action-rail__secondary-btn",
+                  disabled: @latest_report.blank?,
+                  title: (@latest_report.blank? ? "Generate a report first" : nil) %>
             <%= button_to "Refresh reviews + re-analyze",
                   refresh_workspace_app_reports_path(@workspace, @app),
                   method: :post,
-                  class: "action-rail__secondary-btn" %>
+                  class: "action-rail__secondary-btn",
+                  disabled: @latest_report.blank?,
+                  title: (@latest_report.blank? ? "Generate a report first" : nil) %>
           <% end %>
         </div>
       </div>

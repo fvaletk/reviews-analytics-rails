@@ -76,6 +76,131 @@ RSpec.describe "Apps", type: :request do
   end
 
   # ---------------------------------------------------------------------------
+  # GET /workspaces/:workspace_id/apps/:id — action rail buttons
+  # (BRA-74: Re-analyze/Refresh disabled until a report has completed)
+  # ---------------------------------------------------------------------------
+  describe "action rail buttons on the app show page" do
+    let(:the_app) { create(:app, workspace: workspace) }
+
+    def find_button(body, text)
+      Nokogiri::HTML::Document.parse(body).css("button").find { |btn| btn.text.strip == text }
+    end
+
+    context "when the app has no completed reports" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      context "and there are no reports at all" do
+        it "renders 'Re-analyze existing reviews' as disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Re-analyze existing reviews")
+          expect(button["disabled"]).to be_present
+        end
+
+        it "renders 'Refresh reviews + re-analyze' as disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Refresh reviews + re-analyze")
+          expect(button["disabled"]).to be_present
+        end
+
+        it "explains why 'Re-analyze existing reviews' is disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Re-analyze existing reviews")
+          expect(button["title"]).to eq("Generate a report first")
+        end
+
+        it "explains why 'Refresh reviews + re-analyze' is disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Refresh reviews + re-analyze")
+          expect(button["title"]).to eq("Generate a report first")
+        end
+
+        it "still renders 'Generate Report' without a disabled attribute" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Generate Report")
+          expect(button["disabled"]).to be_nil
+        end
+      end
+
+      context "and there are only pending/failed reports" do
+        before do
+          create(:report, app: the_app, status: :pending)
+          create(:report, app: the_app, status: :failed)
+        end
+
+        it "still renders 'Re-analyze existing reviews' as disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Re-analyze existing reviews")
+          expect(button["disabled"]).to be_present
+        end
+
+        it "still renders 'Refresh reviews + re-analyze' as disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_button(response.body, "Refresh reviews + re-analyze")
+          expect(button["disabled"]).to be_present
+        end
+      end
+    end
+
+    context "when the app has at least one completed report" do
+      before do
+        create(:report, app: the_app, status: :complete)
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "renders 'Re-analyze existing reviews' without the disabled attribute" do
+        get workspace_app_path(workspace, the_app)
+        button = find_button(response.body, "Re-analyze existing reviews")
+        expect(button["disabled"]).to be_nil
+      end
+
+      it "renders 'Refresh reviews + re-analyze' without the disabled attribute" do
+        get workspace_app_path(workspace, the_app)
+        button = find_button(response.body, "Refresh reviews + re-analyze")
+        expect(button["disabled"]).to be_nil
+      end
+
+      it "does not render the disabled explanation title" do
+        get workspace_app_path(workspace, the_app)
+        button = find_button(response.body, "Re-analyze existing reviews")
+        expect(button["title"]).to be_nil
+      end
+    end
+
+    context "when the user is a collaborator (cannot generate reports)" do
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "does not render the 'Generate Report' button" do
+        get workspace_app_path(workspace, the_app)
+        expect(find_button(response.body, "Generate Report")).to be_nil
+      end
+
+      it "does not render the secondary action buttons" do
+        get workspace_app_path(workspace, the_app)
+        expect(find_button(response.body, "Re-analyze existing reviews")).to be_nil
+      end
+    end
+
+    context "when the user is an admin (can generate reports)" do
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "renders the 'Generate Report' button regardless of report history" do
+        get workspace_app_path(workspace, the_app)
+        expect(find_button(response.body, "Generate Report")).to be_present
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # GET /workspaces/:workspace_id/apps/new
   # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/new" do
