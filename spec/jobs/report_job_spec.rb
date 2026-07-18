@@ -3,6 +3,12 @@
 require "rails_helper"
 
 RSpec.describe ReportJob, type: :job do
+  describe "::MAX_REVIEWS_PER_ANALYSIS" do
+    it "is capped at 500" do
+      expect(described_class::MAX_REVIEWS_PER_ANALYSIS).to eq(500)
+    end
+  end
+
   let(:workspace) { create(:workspace) }
   let(:user) { create(:user) }
   let(:app) { create(:app, workspace: workspace, app_store_id: "12345", app_store_country: "us", play_store_id: nil) }
@@ -371,6 +377,116 @@ RSpec.describe ReportJob, type: :job do
 
       it "saves the LLM structured output" do
         expect(report.reload.structured_output).to eq(llm_result)
+      end
+    end
+
+    context "when review count is below the cap" do
+      before do
+        allow(Rails.logger).to receive(:info).and_call_original
+        described_class.perform_now(report.id)
+      end
+
+      it "does not emit the review cap log line" do
+        expect(Rails.logger).not_to have_received(:info).with(/review cap applied/)
+      end
+    end
+
+    context "when the review count exactly equals the cap" do
+      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 3) }
+
+      before do
+        allow(Rails.logger).to receive(:info).and_call_original
+        described_class.perform_now(report.id)
+      end
+
+      it "emits the review cap log line" do
+        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      end
+    end
+
+    context "when the review cap is exceeded on re-analyze (skip_scraping: true)" do
+      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 5) }
+
+      let!(:older_reviews) do
+        create_list(:review, 4, app: app, store: :app_store, reviewed_at: 10.days.ago)
+      end
+
+      let!(:newer_reviews) do
+        create_list(:review, 5, app: app, store: :app_store, reviewed_at: 1.day.ago)
+      end
+
+      before do
+        allow(Rails.logger).to receive(:info).and_call_original
+        described_class.perform_now(report.id, skip_scraping: true)
+      end
+
+      it "sends only MAX_REVIEWS_PER_ANALYSIS reviews to LlmService" do
+        expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 5 })
+      end
+
+      it "sends only the most recently reviewed reviews to LlmService" do
+        expect(LlmService).to have_received(:analyze).with(
+          reviews: satisfy { |r| r.map(&:id).sort == newer_reviews.map(&:id).sort }
+        )
+      end
+
+      it "excludes the older reviews beyond the cap" do
+        expect(LlmService).to have_received(:analyze).with(
+          reviews: satisfy { |r| (r.map(&:id) & older_reviews.map(&:id)).empty? }
+        )
+      end
+
+      it "emits the review cap log line" do
+        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      end
+
+      it "sets total_reviews_analyzed to the capped count (reviews_for_analysis.size)" do
+        expect(report.reload.total_reviews_analyzed).to eq(5)
+      end
+    end
+
+    context "when the review cap is exceeded on generate (skip_scraping: false)" do
+      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 5) }
+
+      let!(:pre_existing_reviews) do
+        create_list(:review, 3, app: app, store: :app_store, reviewed_at: 30.days.ago)
+      end
+
+      let(:scraped_reviews) do
+        (1..5).map do |i|
+          {
+            "external_id" => "new-#{i}",
+            "store" => "app_store",
+            "author" => "Author #{i}",
+            "rating" => 5,
+            "title" => "Title #{i}",
+            "body" => "Body #{i}",
+            "reviewed_at" => (1.day.ago + i.hours).iso8601
+          }
+        end
+      end
+
+      before do
+        allow(Rails.logger).to receive(:info).and_call_original
+        described_class.perform_now(report.id)
+      end
+
+      it "sends only MAX_REVIEWS_PER_ANALYSIS reviews to LlmService" do
+        expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 5 })
+      end
+
+      it "sends only the most recently reviewed reviews to LlmService, excluding the older pre-existing ones" do
+        expect(LlmService).to have_received(:analyze).with(
+          reviews: satisfy { |r| r.map(&:external_id).sort == scraped_reviews.map { |sr| sr["external_id"] }.sort }
+        )
+      end
+
+      it "emits the review cap log line" do
+        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      end
+
+      it "sets total_reviews_analyzed to the count of newly scraped reviews, not the capped count" do
+        expect(report.reload.total_reviews_analyzed).to eq(scraped_reviews.size)
       end
     end
 

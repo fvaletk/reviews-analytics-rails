@@ -3,12 +3,14 @@
 class ReportJob < ApplicationJob
   queue_as :default
 
+  MAX_REVIEWS_PER_ANALYSIS = 500
+
   def perform(report_id, skip_scraping: false)
     report = Report.find(report_id)
     app = report.app
 
     if skip_scraping
-      reviews_for_analysis = app.reviews.order(reviewed_at: :desc).limit(500)
+      reviews_for_analysis = app.reviews.order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_ANALYSIS)
       total_reviews_analyzed = reviews_for_analysis.size
     else
       update_status(report, :fetching)
@@ -22,8 +24,12 @@ class ReportJob < ApplicationJob
       reviews_data = build_review_records(raw["reviews"] || [], app.id)
       Review.insert_all(reviews_data, unique_by: [:app_id, :store, :external_id]) if reviews_data.any?
 
-      reviews_for_analysis = Review.where(app: app)
+      reviews_for_analysis = Review.where(app: app).order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_ANALYSIS)
       total_reviews_analyzed = reviews_data.size
+    end
+
+    if reviews_for_analysis.size == MAX_REVIEWS_PER_ANALYSIS
+      Rails.logger.info("[ReportJob] review cap applied — #{MAX_REVIEWS_PER_ANALYSIS} of #{Review.where(app: app).count} reviews used for app #{app.id}")
     end
 
     update_status(report, :analyzing)
