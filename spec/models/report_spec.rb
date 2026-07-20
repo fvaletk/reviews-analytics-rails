@@ -26,6 +26,34 @@ RSpec.describe Report, type: :model do
         "failed" => 4
       )
     end
+
+    it "defines all report_type values" do
+      expect(described_class.report_types).to eq(
+        "generate" => 0,
+        "refresh" => 1,
+        "reanalyze" => 2
+      )
+    end
+
+    it "defaults report_type to generate for a new record" do
+      report = build(:report)
+      expect(report.report_type).to eq("generate")
+    end
+
+    it "defaults report_type to generate for a persisted record with no report_type given" do
+      report = create(:report)
+      expect(report.reload.report_type).to eq("generate")
+    end
+
+    it "accepts refresh as a report_type" do
+      report = build(:report, report_type: :refresh)
+      expect(report.report_type).to eq("refresh")
+    end
+
+    it "accepts reanalyze as a report_type" do
+      report = build(:report, report_type: :reanalyze)
+      expect(report.report_type).to eq("reanalyze")
+    end
   end
 
   describe "validations" do

@@ -17,7 +17,7 @@ class ReportsController < ApplicationController
   def create
     authorize @app, :generate_report?
 
-    @report = @app.reports.create!(status: :pending, generated_by: current_user)
+    @report = @app.reports.create!(status: :pending, generated_by: current_user, report_type: :generate)
     ReportJob.perform_later(@report.id)
 
     set_report_status_locals
@@ -36,7 +36,7 @@ class ReportsController < ApplicationController
     @app.reports.find(params[:id]) if params[:id]
     authorize @app, :generate_report?
 
-    @report = @app.reports.create!(status: :pending, generated_by: current_user)
+    @report = @app.reports.create!(status: :pending, generated_by: current_user, report_type: :reanalyze)
     ReportJob.perform_later(@report.id, skip_scraping: true)
 
     set_report_status_locals
@@ -50,7 +50,7 @@ class ReportsController < ApplicationController
     @app.reports.find(params[:id]) if params[:id]
     authorize @app, :generate_report?
 
-    @report = @app.reports.create!(status: :pending, generated_by: current_user)
+    @report = @app.reports.create!(status: :pending, generated_by: current_user, report_type: :refresh)
     ReportJob.perform_later(@report.id)
 
     set_report_status_locals

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_07_04_224613) do
+ActiveRecord::Schema[8.0].define(version: 2026_07_20_000001) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -63,6 +63,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_07_04_224613) do
     t.datetime "updated_at", null: false
     t.integer "app_store_reviews_count", default: 0, null: false
     t.integer "play_store_reviews_count", default: 0, null: false
+    t.integer "report_type", default: 0, null: false
     t.index ["app_id"], name: "index_reports_on_app_id"
     t.index ["generated_by_user_id"], name: "index_reports_on_generated_by_user_id"
   end

@@ -51,6 +51,12 @@ RSpec.describe "Reports", type: :request do
         expect(Report.last.generated_by).to eq(user)
       end
 
+      # BRA-77
+      it "sets report_type to generate" do
+        post workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.report_type).to eq("generate")
+      end
+
       it "enqueues a ReportJob with the new report's id" do
         post workspace_app_reports_path(workspace, the_app)
         report = Report.last
@@ -365,6 +371,13 @@ RSpec.describe "Reports", type: :request do
         expect(Report.order(:created_at).last.generated_by).to eq(user)
       end
 
+      # BRA-77
+      it "sets report_type to reanalyze on the new report" do
+        existing_report
+        post reanalyze_workspace_app_report_path(workspace, the_app, existing_report)
+        expect(Report.order(:created_at).last.report_type).to eq("reanalyze")
+      end
+
       it "enqueues a ReportJob with skip_scraping: true for the new report" do
         existing_report
         expect {
@@ -472,6 +485,12 @@ RSpec.describe "Reports", type: :request do
       it "sets generated_by to the current user on the new report" do
         post reanalyze_workspace_app_reports_path(workspace, the_app)
         expect(Report.last.generated_by).to eq(user)
+      end
+
+      # BRA-77
+      it "sets report_type to reanalyze on the new report" do
+        post reanalyze_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.report_type).to eq("reanalyze")
       end
 
       it "enqueues a ReportJob with skip_scraping: true for the new report" do
@@ -611,6 +630,53 @@ RSpec.describe "Reports", type: :request do
         get workspace_app_reports_path(workspace, the_app)
         expect(response.body).to include("App Store: 15 / Play Store: 5")
       end
+
+      # BRA-77 — default report_type for existing/backfilled reports is generate
+      it "renders a Generate badge for reports with no report_type explicitly set" do
+        get workspace_app_reports_path(workspace, the_app)
+        doc = Nokogiri::HTML::Document.parse(response.body)
+        badges = doc.css(".report-type-badge")
+        expect(badges).not_to be_empty
+        expect(badges.all? { |badge| badge.text.strip == "Generate" }).to be true
+      end
+    end
+
+    context "with reports of each report_type" do
+      let!(:generate_report) do
+        create(:report, app: the_app, status: :complete, report_type: :generate, generated_by: user)
+      end
+      let!(:refresh_report) do
+        create(:report, app: the_app, status: :complete, report_type: :refresh, generated_by: user)
+      end
+      let!(:reanalyze_report) do
+        create(:report, app: the_app, status: :complete, report_type: :reanalyze, generated_by: user)
+      end
+
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "renders a Generate badge for a generate report" do
+        get workspace_app_reports_path(workspace, the_app)
+        doc = Nokogiri::HTML::Document.parse(response.body)
+        badge = doc.at_css(".report-type-badge-generate")
+        expect(badge.text.strip).to eq("Generate")
+      end
+
+      it "renders a Refresh badge for a refresh report" do
+        get workspace_app_reports_path(workspace, the_app)
+        doc = Nokogiri::HTML::Document.parse(response.body)
+        badge = doc.at_css(".report-type-badge-refresh")
+        expect(badge.text.strip).to eq("Refresh")
+      end
+
+      it "renders a Reanalyze badge for a reanalyze report" do
+        get workspace_app_reports_path(workspace, the_app)
+        doc = Nokogiri::HTML::Document.parse(response.body)
+        badge = doc.at_css(".report-type-badge-reanalyze")
+        expect(badge.text.strip).to eq("Reanalyze")
+      end
     end
 
     context "when there are no completed reports" do
@@ -685,6 +751,13 @@ RSpec.describe "Reports", type: :request do
         existing_report
         post refresh_workspace_app_report_path(workspace, the_app, existing_report)
         expect(Report.order(:created_at).last.generated_by).to eq(user)
+      end
+
+      # BRA-77
+      it "sets report_type to refresh on the new report" do
+        existing_report
+        post refresh_workspace_app_report_path(workspace, the_app, existing_report)
+        expect(Report.order(:created_at).last.report_type).to eq("refresh")
       end
 
       it "enqueues a ReportJob with the new report's id and no skip_scraping kwarg" do
@@ -792,6 +865,12 @@ RSpec.describe "Reports", type: :request do
       it "sets generated_by to the current user on the new report" do
         post refresh_workspace_app_reports_path(workspace, the_app)
         expect(Report.last.generated_by).to eq(user)
+      end
+
+      # BRA-77
+      it "sets report_type to refresh on the new report" do
+        post refresh_workspace_app_reports_path(workspace, the_app)
+        expect(Report.last.report_type).to eq("refresh")
       end
 
       it "enqueues a ReportJob with the new report's id and no skip_scraping kwarg" do
