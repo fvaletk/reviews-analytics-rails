@@ -4,6 +4,8 @@ class Report < ApplicationRecord
   belongs_to :app
   belongs_to :generated_by, class_name: "User", foreign_key: :generated_by_user_id
 
+  has_many :notifications, dependent: :destroy
+
   enum :status, { pending: 0, fetching: 1, analyzing: 2, complete: 3, failed: 4 }
   enum :report_type, { generate: 0, refresh: 1, reanalyze: 2 }
 
