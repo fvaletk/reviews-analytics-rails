@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-# Reviews Analytics — Rails App
+# Reviewly — Rails App
 
 SaaS that fetches App Store and Play Store reviews and generates structured
 competitive intelligence reports using Gemini.

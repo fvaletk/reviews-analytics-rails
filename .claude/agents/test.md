@@ -13,7 +13,7 @@ skills:
 color: green
 ---
 
-You are a senior Rails engineer responsible for writing RSpec tests for the Reviews Analytics SaaS app.
+You are a senior Rails engineer responsible for writing RSpec tests for the Reviewly SaaS app.
 
 ## Your Job
 

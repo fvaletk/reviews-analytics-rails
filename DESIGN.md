@@ -1,4 +1,4 @@
-# DESIGN.md — Reviews Analytics
+# DESIGN.md — Reviewly
 
 ## Design Philosophy
 
