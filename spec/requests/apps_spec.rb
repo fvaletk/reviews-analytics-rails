@@ -922,12 +922,12 @@ RSpec.describe "Apps", type: :request do
   describe "Edit/Delete entry points on the app show page" do
     let(:the_app) { create(:app, workspace: workspace) }
 
-    def find_link(body, text)
-      Nokogiri::HTML::Document.parse(body).css("a").find { |a| a.text.strip == text }
+    def find_edit_link(body)
+      Nokogiri::HTML::Document.parse(body).css("a.icon-btn--edit").first
     end
 
-    def find_delete_button(body)
-      Nokogiri::HTML::Document.parse(body).css("button").find { |btn| btn.text.strip == "Delete App" }
+    def find_delete_trigger_button(body)
+      Nokogiri::HTML::Document.parse(body).css("button.icon-btn--delete").first
     end
 
     context "when signed in as an admin" do
@@ -936,15 +936,15 @@ RSpec.describe "Apps", type: :request do
         sign_in user
       end
 
-      it "renders the Edit App link" do
+      it "renders the Edit App icon link" do
         get workspace_app_path(workspace, the_app)
-        expect(find_link(response.body, "Edit App")).to be_present
+        expect(find_edit_link(response.body)).to be_present
       end
 
-      it "renders the Delete App button with a data-turbo-confirm attribute" do
+      it "renders the Delete App icon button that opens the delete confirmation modal" do
         get workspace_app_path(workspace, the_app)
-        button = find_delete_button(response.body)
-        expect(button["data-turbo-confirm"]).to be_present
+        button = find_delete_trigger_button(response.body)
+        expect(button["data-action"]).to eq("click->delete-modal#open")
       end
     end
 
@@ -954,14 +954,14 @@ RSpec.describe "Apps", type: :request do
         sign_in user
       end
 
-      it "does not render the Edit App link" do
+      it "does not render the Edit App icon link" do
         get workspace_app_path(workspace, the_app)
-        expect(find_link(response.body, "Edit App")).to be_nil
+        expect(find_edit_link(response.body)).to be_nil
       end
 
-      it "does not render the Delete App button" do
+      it "does not render the Delete App icon button" do
         get workspace_app_path(workspace, the_app)
-        expect(find_delete_button(response.body)).to be_nil
+        expect(find_delete_trigger_button(response.body)).to be_nil
       end
     end
   end

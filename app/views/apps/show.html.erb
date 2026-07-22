@@ -25,7 +25,24 @@
 
     <div class="app-show__body">
       <div class="app-show__details">
-        <h2 class="app-show__section-title">Store Details</h2>
+        <div class="store-details-header">
+          <h2 class="app-show__section-title">Store Details</h2>
+          <div class="store-details-header__actions">
+            <% if policy(@app).edit? %>
+              <%= link_to edit_workspace_app_path(@workspace, @app), class: "icon-btn icon-btn--edit", title: "Edit app" do %>
+                <%= render "shared/icons/pencil" %>
+              <% end %>
+            <% end %>
+            <% if policy(@app).destroy? %>
+              <button type="button"
+                      class="icon-btn icon-btn--delete"
+                      title="Delete app"
+                      data-action="click->delete-modal#open">
+                <%= render "shared/icons/trash" %>
+              </button>
+            <% end %>
+          </div>
+        </div>
         <dl class="store-detail-grid">
           <% if @app.app_store_id.present? %>
             <div class="store-detail-row">
@@ -80,3 +97,22 @@
     </div>
   </div>
 </main>
+
+<% if policy(@app).destroy? %>
+  <div class="delete-modal-backdrop" data-controller="delete-modal" data-delete-modal-target="backdrop">
+    <div class="delete-modal">
+      <h3 class="delete-modal__title">Delete "<%= @app.name %>"?</h3>
+      <p class="delete-modal__body">
+        This will permanently delete the app and all its reviews and reports. This cannot be undone.
+      </p>
+      <div class="delete-modal__actions">
+        <button type="button" class="btn-secondary" data-action="click->delete-modal#close">
+          Cancel
+        </button>
+        <%= button_to "Delete app", workspace_app_path(@workspace, @app),
+              method: :delete,
+              class: "delete-modal__confirm-btn" %>
+      </div>
+    </div>
+  </div>
+<% end %>

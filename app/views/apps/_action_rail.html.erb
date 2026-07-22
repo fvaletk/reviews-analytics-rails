@@ -45,28 +45,4 @@
     <% end %>
   </div>
 </div>
-
-<% if policy(@app).edit? || policy(@app).destroy? %>
-  <div class="action-rail">
-    <div class="action-rail__divider">
-      <span class="action-rail__divider-label">Manage app</span>
-    </div>
-
-    <div class="action-rail__secondary-group">
-      <% if policy(@app).edit? %>
-        <%= link_to "Edit App",
-              edit_workspace_app_path(@workspace, @app),
-              class: "action-rail__secondary-btn" %>
-      <% end %>
-
-      <% if policy(@app).destroy? %>
-        <%= button_to "Delete App",
-              workspace_app_path(@workspace, @app),
-              method: :delete,
-              class: "btn-remove action-rail__delete-btn",
-              data: { turbo_confirm: "Delete #{@app.name}? This permanently removes all its reviews and reports." } %>
-      <% end %>
-    </div>
-  </div>
-<% end %>
 </div>
