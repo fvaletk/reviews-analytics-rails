@@ -930,6 +930,14 @@ RSpec.describe "Apps", type: :request do
       Nokogiri::HTML::Document.parse(body).css("button.icon-btn--delete").first
     end
 
+    def find_delete_modal_backdrop(body)
+      Nokogiri::HTML::Document.parse(body).at_css(".delete-modal-backdrop")
+    end
+
+    def find_delete_modal_controller_scope(body)
+      Nokogiri::HTML::Document.parse(body).at_css("[data-controller='delete-modal']")
+    end
+
     context "when signed in as an admin" do
       before do
         make_member(role: :admin)
@@ -945,6 +953,57 @@ RSpec.describe "Apps", type: :request do
         get workspace_app_path(workspace, the_app)
         button = find_delete_trigger_button(response.body)
         expect(button["data-action"]).to eq("click->delete-modal#open")
+      end
+
+      # ---------------------------------------------------------------------
+      # BRA-80 regression: data-controller="delete-modal" previously lived
+      # only on the backdrop div, a DOM sibling of <main> rather than an
+      # ancestor of the trash trigger button, so the Stimulus action on the
+      # trigger button could never resolve its controller. The fix wraps
+      # both the trigger and the backdrop under one outer controller scope.
+      # ---------------------------------------------------------------------
+      it "renders the delete-modal Stimulus controller as a shared ancestor of both the trash trigger and the modal backdrop" do
+        get workspace_app_path(workspace, the_app)
+        scope = find_delete_modal_controller_scope(response.body)
+
+        expect(scope).to be_present
+        expect(scope.css("button.icon-btn--delete")).to be_present
+        expect(scope.css(".delete-modal-backdrop")).to be_present
+      end
+
+      it "renders exactly one element carrying data-controller=\"delete-modal\"" do
+        get workspace_app_path(workspace, the_app)
+        scopes = Nokogiri::HTML::Document.parse(response.body).css("[data-controller='delete-modal']")
+        expect(scopes.size).to eq(1)
+      end
+
+      it "does not declare the delete-modal controller on the backdrop itself (controller lives on the outer wrapper only)" do
+        get workspace_app_path(workspace, the_app)
+        backdrop = find_delete_modal_backdrop(response.body)
+        expect(backdrop["data-controller"]).to be_nil
+      end
+
+      it "renders the modal backdrop with the delete-modal backdrop target" do
+        get workspace_app_path(workspace, the_app)
+        backdrop = find_delete_modal_backdrop(response.body)
+        expect(backdrop["data-delete-modal-target"]).to eq("backdrop")
+      end
+
+      it "renders a Cancel button that closes the modal" do
+        get workspace_app_path(workspace, the_app)
+        cancel_button = Nokogiri::HTML::Document.parse(response.body)
+                           .css("button")
+                           .find { |btn| btn.text.strip == "Cancel" }
+        expect(cancel_button["data-action"]).to eq("click->delete-modal#close")
+      end
+
+      it "renders a Delete app confirm button that submits a DELETE request to the app path" do
+        get workspace_app_path(workspace, the_app)
+        doc = Nokogiri::HTML::Document.parse(response.body)
+        confirm_form = doc.css("form").find { |form| form.at_css(".delete-modal__confirm-btn") }
+
+        expect(confirm_form["action"]).to eq(workspace_app_path(workspace, the_app))
+        expect(confirm_form.at_css("input[name='_method']")["value"]).to eq("delete")
       end
     end
 
@@ -962,6 +1021,11 @@ RSpec.describe "Apps", type: :request do
       it "does not render the Delete App icon button" do
         get workspace_app_path(workspace, the_app)
         expect(find_delete_trigger_button(response.body)).to be_nil
+      end
+
+      it "does not render the delete confirmation modal backdrop" do
+        get workspace_app_path(workspace, the_app)
+        expect(find_delete_modal_backdrop(response.body)).to be_nil
       end
     end
   end
