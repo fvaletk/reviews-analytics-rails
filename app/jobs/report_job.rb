@@ -3,15 +3,15 @@
 class ReportJob < ApplicationJob
   queue_as :default
 
-  MAX_REVIEWS_PER_ANALYSIS = 500
+  MAX_REVIEWS_TOTAL     = 500  # unchanged from BRA-73 — worst-case prompt size is identical
+  MAX_REVIEWS_PER_STORE = 250  # provisional: TOTAL / 2, pending recalibration in BRA-85
 
   def perform(report_id, skip_scraping: false)
     report = Report.find(report_id)
     app = report.app
 
     if skip_scraping
-      reviews_for_analysis = app.reviews.order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_ANALYSIS)
-      total_reviews_analyzed = reviews_for_analysis.size
+      app_store_reviews, play_store_reviews = select_reviews_for_analysis(app.reviews)
     else
       update_status(report, :fetching)
 
@@ -22,15 +22,16 @@ class ReportJob < ApplicationJob
       )
 
       reviews_data = build_review_records(raw["reviews"] || [], app.id)
-      Review.insert_all(reviews_data, unique_by: [:app_id, :store, :external_id]) if reviews_data.any?
+      Review.insert_all(reviews_data, unique_by: [ :app_id, :store, :external_id ]) if reviews_data.any?
 
-      reviews_for_analysis = Review.where(app: app).order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_ANALYSIS)
-      total_reviews_analyzed = reviews_data.size
+      app_store_reviews, play_store_reviews = select_reviews_for_analysis(Review.where(app: app))
     end
 
-    if reviews_for_analysis.size == MAX_REVIEWS_PER_ANALYSIS
-      Rails.logger.info("[ReportJob] review cap applied — #{MAX_REVIEWS_PER_ANALYSIS} of #{Review.where(app: app).count} reviews used for app #{app.id}")
-    end
+    reviews_for_analysis = app_store_reviews + play_store_reviews
+    total_reviews_analyzed = reviews_for_analysis.size
+
+    log_review_cap(app, :app_store, app_store_reviews)
+    log_review_cap(app, :play_store, play_store_reviews)
 
     update_status(report, :analyzing)
 
@@ -73,9 +74,46 @@ class ReportJob < ApplicationJob
 
   private
 
+  # Selects up to MAX_REVIEWS_PER_STORE reviews from each store (most recent
+  # first), then spills any unused per-store allocation to whichever store(s)
+  # still have more reviews, up to MAX_REVIEWS_TOTAL combined. This ensures an
+  # app with reviews in only one store still receives up to MAX_REVIEWS_TOTAL
+  # reviews from that store, while a healthy mix of both stores never lets one
+  # store crowd the other out below its allotment.
+  def select_reviews_for_analysis(scope)
+    app_store_scope  = scope.app_store
+    play_store_scope = scope.play_store
+
+    app_store_reviews  = app_store_scope.order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_STORE).to_a
+    play_store_reviews = play_store_scope.order(reviewed_at: :desc).limit(MAX_REVIEWS_PER_STORE).to_a
+
+    remaining = MAX_REVIEWS_TOTAL - app_store_reviews.size - play_store_reviews.size
+
+    if remaining > 0
+      extra_app_store = app_store_scope.order(reviewed_at: :desc).offset(app_store_reviews.size).limit(remaining).to_a
+      remaining -= extra_app_store.size
+      extra_play_store = remaining > 0 ? play_store_scope.order(reviewed_at: :desc).offset(play_store_reviews.size).limit(remaining).to_a : []
+
+      app_store_reviews += extra_app_store
+      play_store_reviews += extra_play_store
+    end
+
+    [ app_store_reviews, play_store_reviews ]
+  end
+
+  # Logs only when the store's cap was actually binding, i.e. some of that
+  # store's reviews were excluded from analysis (including a store that used
+  # up its own allotment and also absorbed the other store's spillover).
+  def log_review_cap(app, store, selected_reviews)
+    total = Review.where(app: app).public_send(store).count
+    return if selected_reviews.size >= total
+
+    Rails.logger.info("[ReportJob] #{store} review cap applied — #{selected_reviews.size} of #{total} reviews used for app #{app.id}")
+  end
+
   def store_breakdown(reviews)
     counts = reviews.pluck(:store).tally
-    [counts["app_store"] || 0, counts["play_store"] || 0]
+    [ counts["app_store"] || 0, counts["play_store"] || 0 ]
   end
 
   def update_status(report, status)

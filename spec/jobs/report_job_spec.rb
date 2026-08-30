@@ -3,9 +3,15 @@
 require "rails_helper"
 
 RSpec.describe ReportJob, type: :job do
-  describe "::MAX_REVIEWS_PER_ANALYSIS" do
+  describe "::MAX_REVIEWS_TOTAL" do
     it "is capped at 500" do
-      expect(described_class::MAX_REVIEWS_PER_ANALYSIS).to eq(500)
+      expect(described_class::MAX_REVIEWS_TOTAL).to eq(500)
+    end
+  end
+
+  describe "::MAX_REVIEWS_PER_STORE" do
+    it "is capped at 250" do
+      expect(described_class::MAX_REVIEWS_PER_STORE).to eq(250)
     end
   end
 
@@ -596,21 +602,28 @@ RSpec.describe ReportJob, type: :job do
       end
     end
 
-    context "when the review count exactly equals the cap" do
-      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 3) }
+    context "when a store's review count exactly equals its per-store cap (no exclusion)" do
+      before { stub_const("ReportJob::MAX_REVIEWS_PER_STORE", 2) }
 
       before do
         allow(Rails.logger).to receive(:info).and_call_original
         described_class.perform_now(report.id)
       end
 
-      it "emits the review cap log line" do
-        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      it "does not emit a cap log line for the store that exactly matched its cap" do
+        expect(Rails.logger).not_to have_received(:info).with(/play_store review cap applied/)
+      end
+
+      it "does not emit a cap log line for the store that was already under its cap" do
+        expect(Rails.logger).not_to have_received(:info).with(/app_store review cap applied/)
       end
     end
 
     context "when the review cap is exceeded on re-analyze (skip_scraping: true)" do
-      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 5) }
+      before do
+        stub_const("ReportJob::MAX_REVIEWS_PER_STORE", 5)
+        stub_const("ReportJob::MAX_REVIEWS_TOTAL", 5)
+      end
 
       let!(:older_reviews) do
         create_list(:review, 4, app: app, store: :app_store, reviewed_at: 10.days.ago)
@@ -625,7 +638,7 @@ RSpec.describe ReportJob, type: :job do
         described_class.perform_now(report.id, skip_scraping: true)
       end
 
-      it "sends only MAX_REVIEWS_PER_ANALYSIS reviews to LlmService" do
+      it "sends only MAX_REVIEWS_TOTAL reviews to LlmService" do
         expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 5 })
       end
 
@@ -641,17 +654,20 @@ RSpec.describe ReportJob, type: :job do
         )
       end
 
-      it "emits the review cap log line" do
-        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      it "emits the app_store review cap log line" do
+        expect(Rails.logger).to have_received(:info).with(/app_store review cap applied — 5 of 9 reviews used/)
       end
 
-      it "sets total_reviews_analyzed to the capped count (reviews_for_analysis.size)" do
+      it "sets total_reviews_analyzed to the capped count actually analyzed" do
         expect(report.reload.total_reviews_analyzed).to eq(5)
       end
     end
 
-    context "when the review cap is exceeded on generate (skip_scraping: false)" do
-      before { stub_const("ReportJob::MAX_REVIEWS_PER_ANALYSIS", 5) }
+    context "when the review cap limits how many reviews are analyzed on the refresh path (existing + freshly scraped reviews)" do
+      before do
+        stub_const("ReportJob::MAX_REVIEWS_PER_STORE", 4)
+        stub_const("ReportJob::MAX_REVIEWS_TOTAL", 4)
+      end
 
       let!(:pre_existing_reviews) do
         create_list(:review, 3, app: app, store: :app_store, reviewed_at: 30.days.ago)
@@ -676,22 +692,180 @@ RSpec.describe ReportJob, type: :job do
         described_class.perform_now(report.id)
       end
 
-      it "sends only MAX_REVIEWS_PER_ANALYSIS reviews to LlmService" do
-        expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 5 })
+      it "still upserts every scraped review regardless of the analysis cap" do
+        expect(Review.where(app: app).count).to eq(pre_existing_reviews.size + scraped_reviews.size)
       end
 
-      it "sends only the most recently reviewed reviews to LlmService, excluding the older pre-existing ones" do
+      it "sends only MAX_REVIEWS_TOTAL reviews to LlmService" do
+        expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 4 })
+      end
+
+      it "sends only the most recently reviewed reviews to LlmService, excluding older ones beyond the cap" do
         expect(LlmService).to have_received(:analyze).with(
-          reviews: satisfy { |r| r.map(&:external_id).sort == scraped_reviews.map { |sr| sr["external_id"] }.sort }
+          reviews: satisfy { |r| r.map(&:external_id).sort == %w[new-2 new-3 new-4 new-5] }
         )
       end
 
-      it "emits the review cap log line" do
-        expect(Rails.logger).to have_received(:info).with(/review cap applied/)
+      it "emits the app_store review cap log line" do
+        expect(Rails.logger).to have_received(:info).with(/app_store review cap applied — 4 of 8 reviews used/)
       end
 
-      it "sets total_reviews_analyzed to the count of newly scraped reviews, not the capped count" do
-        expect(report.reload.total_reviews_analyzed).to eq(scraped_reviews.size)
+      it "sets total_reviews_analyzed to the count actually analyzed, not the count scraped or stored" do
+        expect(report.reload.total_reviews_analyzed).to eq(4)
+      end
+    end
+
+    context "per-store review selection (BRA-82)" do
+      context "when one store has far more reviews than the other (lopsided)" do
+        let!(:app_store_reviews) do
+          create_list(:review, 480, app: app, store: :app_store, reviewed_at: 1.day.ago)
+        end
+
+        let!(:play_store_reviews) do
+          create_list(:review, 20, app: app, store: :play_store, reviewed_at: 1.day.ago)
+        end
+
+        before do
+          allow(Rails.logger).to receive(:info).and_call_original
+          described_class.perform_now(report.id, skip_scraping: true)
+        end
+
+        it "includes every app_store review via spillover, not just its 250 allotment" do
+          expect(LlmService).to have_received(:analyze).with(
+            reviews: satisfy { |r| (r.map(&:id) & app_store_reviews.map(&:id)).size == 480 }
+          )
+        end
+
+        it "includes every play_store review, none excluded by the minority store" do
+          expect(LlmService).to have_received(:analyze).with(
+            reviews: satisfy { |r| (r.map(&:id) & play_store_reviews.map(&:id)).size == 20 }
+          )
+        end
+
+        it "sets total_reviews_analyzed to the full 500 combined" do
+          expect(report.reload.total_reviews_analyzed).to eq(500)
+        end
+
+        it "sets app_store_reviews_count to all 480 app_store reviews" do
+          expect(report.reload.app_store_reviews_count).to eq(480)
+        end
+
+        it "sets play_store_reviews_count to all 20 play_store reviews" do
+          expect(report.reload.play_store_reviews_count).to eq(20)
+        end
+
+        it "does not emit a cap log line for the minority play_store" do
+          expect(Rails.logger).not_to have_received(:info).with(/play_store review cap applied/)
+        end
+
+        it "does not emit a cap log line for app_store since spillover included all of it" do
+          expect(Rails.logger).not_to have_received(:info).with(/app_store review cap applied/)
+        end
+      end
+
+      context "when both stores exceed the per-store cap with no spillover headroom" do
+        let!(:app_store_reviews) do
+          create_list(:review, 300, app: app, store: :app_store, reviewed_at: 1.day.ago)
+        end
+
+        let!(:play_store_reviews) do
+          create_list(:review, 300, app: app, store: :play_store, reviewed_at: 1.day.ago)
+        end
+
+        before do
+          allow(Rails.logger).to receive(:info).and_call_original
+          described_class.perform_now(report.id, skip_scraping: true)
+        end
+
+        it "selects exactly 250 app_store reviews" do
+          expect(LlmService).to have_received(:analyze).with(
+            reviews: satisfy { |r| (r.map(&:id) & app_store_reviews.map(&:id)).size == 250 }
+          )
+        end
+
+        it "selects exactly 250 play_store reviews" do
+          expect(LlmService).to have_received(:analyze).with(
+            reviews: satisfy { |r| (r.map(&:id) & play_store_reviews.map(&:id)).size == 250 }
+          )
+        end
+
+        it "sets total_reviews_analyzed to 500" do
+          expect(report.reload.total_reviews_analyzed).to eq(500)
+        end
+
+        it "emits the app_store cap log line naming 250 of 300" do
+          expect(Rails.logger).to have_received(:info).with(/app_store review cap applied — 250 of 300 reviews used/)
+        end
+
+        it "emits the play_store cap log line naming 250 of 300" do
+          expect(Rails.logger).to have_received(:info).with(/play_store review cap applied — 250 of 300 reviews used/)
+        end
+      end
+
+      context "when an app has reviews in only one store" do
+        let!(:app_store_reviews) do
+          create_list(:review, 600, app: app, store: :app_store, reviewed_at: 1.day.ago)
+        end
+
+        before do
+          allow(Rails.logger).to receive(:info).and_call_original
+          described_class.perform_now(report.id, skip_scraping: true)
+        end
+
+        it "still produces a completed report" do
+          expect(report.reload.status).to eq("complete")
+        end
+
+        it "selects the full MAX_REVIEWS_TOTAL (500) from the single store" do
+          expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 500 })
+        end
+
+        it "sets total_reviews_analyzed to 500" do
+          expect(report.reload.total_reviews_analyzed).to eq(500)
+        end
+
+        it "sets app_store_reviews_count to 500" do
+          expect(report.reload.app_store_reviews_count).to eq(500)
+        end
+
+        it "sets play_store_reviews_count to 0" do
+          expect(report.reload.play_store_reviews_count).to eq(0)
+        end
+
+        it "emits the app_store cap log line naming 500 of 600" do
+          expect(Rails.logger).to have_received(:info).with(/app_store review cap applied — 500 of 600 reviews used/)
+        end
+
+        it "does not emit a play_store cap log line since it has no reviews to exclude" do
+          expect(Rails.logger).not_to have_received(:info).with(/play_store review cap applied/)
+        end
+      end
+
+      context "when both stores are comfortably under the cap" do
+        let!(:app_store_reviews) do
+          create_list(:review, 100, app: app, store: :app_store, reviewed_at: 1.day.ago)
+        end
+
+        let!(:play_store_reviews) do
+          create_list(:review, 100, app: app, store: :play_store, reviewed_at: 1.day.ago)
+        end
+
+        before do
+          allow(Rails.logger).to receive(:info).and_call_original
+          described_class.perform_now(report.id, skip_scraping: true)
+        end
+
+        it "includes every review from both stores" do
+          expect(LlmService).to have_received(:analyze).with(reviews: satisfy { |r| r.size == 200 })
+        end
+
+        it "sets total_reviews_analyzed to 200" do
+          expect(report.reload.total_reviews_analyzed).to eq(200)
+        end
+
+        it "does not emit any cap log line" do
+          expect(Rails.logger).not_to have_received(:info).with(/review cap applied/)
+        end
       end
     end
 
