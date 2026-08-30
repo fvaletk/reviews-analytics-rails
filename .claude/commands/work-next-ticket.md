@@ -4,7 +4,7 @@ Fetches the next Todo ticket from Linear, runs it through the full agent pipelin
 
 ## What This Command Does
 
-1. Fetches the next **Todo** ticket from Linear (project: `reviews-analytics-app`, team: `Brain Spark`)
+1. Fetches the next **Todo** ticket from Linear (project: `Reviewly`, team: `Brain Spark`)
 2. Reads the full ticket — title, description, and acceptance criteria
 3. **Validates the ticket is unambiguous** — stops and asks you if anything is unclear
 4. Marks the ticket **In Progress** in Linear

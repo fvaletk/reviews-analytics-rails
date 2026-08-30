@@ -12,6 +12,38 @@ competitive intelligence reports using Gemini.
 
 ---
 
+## Project knowledge lives in the Obsidian vault
+
+This repo is one half of Reviewly. The context — status, decisions, technical
+findings, ticket conventions — lives in the vault at `~/Projects/Capri`:
+
+| What | Where |
+|---|---|
+| Project file — status, decisions, Linear conventions | `01-projects/reviewly/reviewly.md` |
+| Current technical understanding, open threads | `01-projects/reviewly/analysis/current-understanding.md` |
+| Session logs — the reasoning behind past decisions | `01-projects/reviewly/analysis/YYYY-MM-DD-*.md` |
+| Captured findings awaiting triage | `01-projects/reviewly/findings/` |
+
+**Read `current-understanding.md` before making decisions about the LLM pipeline,
+review sampling, or cost.** It records what has already been settled and why —
+including constraints that look real but aren't.
+
+### Reporting a finding
+
+Ran into a bug or figured something out mid-task? Run **`/report-issue`** —
+no arguments. It summarizes the issue **from the current conversation** and
+writes it to `01-projects/reviewly/findings/` in the vault, carrying over the
+file/line references, what was ruled out, and what's still unknown, plus the
+current branch and commit.
+
+It does not create a ticket and does not change any code. Triage happens later
+via `/triage-findings`, which verifies each finding before anything is filed.
+
+Use it instead of fixing unrelated things mid-task, and instead of losing the
+observation when the session ends.
+
+---
+
 ## Prerequisites
 
 Before running `/work-next-ticket`, ensure Docker is running:
@@ -134,7 +166,7 @@ Design doc: `DESIGN.md`. Key rules for any view work:
 
 Run this command to work on the next ticket. Follow each step exactly.
 
-1. Fetch the next **Todo** ticket from Linear project `reviews-analytics-app` (team: Brain Spark)
+1. Fetch the next **Todo** ticket from Linear project `Reviewly` (team: Brain Spark)
 2. Read the full ticket — title, description, and acceptance criteria
 3. **If anything is ambiguous or missing context: STOP. Ask the user. Do not guess.**
 4. Mark ticket **In Progress**

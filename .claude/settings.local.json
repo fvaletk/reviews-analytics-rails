@@ -1,0 +1,15 @@
+{
+    "permissions": {
+      "allow": [
+        "mcp__linear-server__list_projects",
+        "mcp__linear-server__list_teams",
+        "mcp__linear-server__list_issue_labels",
+        "mcp__linear-server__list_issue_statuses",
+        "mcp__linear-server__save_issue",
+        "mcp__linear-server__get_issue",
+        "Bash(docker compose)",
+        "mcp__linear-server__list_issues"
+      ]
+    }
+  }
+  
