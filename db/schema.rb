@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_30_195236) do
+ActiveRecord::Schema[8.0].define(version: 2026_08_30_210000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -71,6 +71,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_30_195236) do
     t.integer "llm_duration_ms"
     t.decimal "cost_usd", precision: 12, scale: 6
     t.jsonb "usage_metadata", default: {}, null: false
+    t.jsonb "selection_metadata", default: {}, null: false
     t.index ["app_id"], name: "index_reports_on_app_id"
     t.index ["generated_by_user_id"], name: "index_reports_on_generated_by_user_id"
     t.index ["model"], name: "index_reports_on_model"

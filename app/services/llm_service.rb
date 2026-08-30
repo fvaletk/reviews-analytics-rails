@@ -101,8 +101,8 @@ class LlmService
     required: [ "summary", "pain_points", "complaints", "feature_requests", "strengths", "opportunities" ]
   }.freeze
 
-  def self.analyze(reviews:)
-    prompt = LlmPromptBuilder.build(reviews: reviews)
+  def self.analyze(reviews:, distribution:)
+    prompt = LlmPromptBuilder.build(reviews: reviews, distribution: distribution)
 
     response = request_with_retries(prompt)
 

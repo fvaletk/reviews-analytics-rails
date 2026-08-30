@@ -5,19 +5,20 @@ require "rails_helper"
 RSpec.describe LlmPromptBuilder do
   describe ".build" do
     let(:reviews) { build_stubbed_list(:review, 2) }
+    let(:distribution) { { "1" => 2, "2" => 3, "3" => 4, "4" => 5, "5" => 6, "unrated" => 1 } }
 
     it "returns a String" do
-      expect(described_class.build(reviews: reviews)).to be_a(String)
+      expect(described_class.build(reviews: reviews, distribution: distribution)).to be_a(String)
     end
 
     it "includes the review count as a substring" do
-      prompt = described_class.build(reviews: reviews)
+      prompt = described_class.build(reviews: reviews, distribution: distribution)
 
       expect(prompt).to include("#{reviews.size} app reviews")
     end
 
     context "schema section names and fields" do
-      let(:prompt) { described_class.build(reviews: reviews) }
+      let(:prompt) { described_class.build(reviews: reviews, distribution: distribution) }
 
       it "includes summary" do
         expect(prompt).to include("summary")
@@ -52,7 +53,7 @@ RSpec.describe LlmPromptBuilder do
     end
 
     context "valid value enumerations" do
-      let(:prompt) { described_class.build(reviews: reviews) }
+      let(:prompt) { described_class.build(reviews: reviews, distribution: distribution) }
 
       it "includes valid severity values" do
         expect(prompt).to include("critical, high, medium, low")
@@ -68,7 +69,7 @@ RSpec.describe LlmPromptBuilder do
     end
 
     it "includes the exact 'Return only valid JSON' instruction" do
-      prompt = described_class.build(reviews: reviews)
+      prompt = described_class.build(reviews: reviews, distribution: distribution)
 
       expect(prompt).to include("Return only valid JSON. No markdown. No explanation.")
     end
@@ -85,7 +86,7 @@ RSpec.describe LlmPromptBuilder do
           reviewed_at: 3.days.ago
         )
       end
-      let(:prompt) { described_class.build(reviews: [ review ]) }
+      let(:prompt) { described_class.build(reviews: [ review ], distribution: distribution) }
 
       it "includes the review's store" do
         expect(prompt).to include("play_store")
@@ -109,6 +110,59 @@ RSpec.describe LlmPromptBuilder do
 
       it "does not include the review's reviewed_at timestamp" do
         expect(prompt).not_to include(review.reviewed_at.to_s)
+      end
+    end
+
+    context "true rating distribution injection (BRA-84)" do
+      let(:distribution) { { "1" => 10, "2" => 20, "3" => 30, "4" => 40, "5" => 50, "unrated" => 5 } }
+      let(:prompt) { described_class.build(reviews: reviews, distribution: distribution) }
+
+      it "states the total corpus size as the sum of the distribution" do
+        expect(prompt).to include("This app has 155 total reviews.")
+      end
+
+      it "states the 1-star count from the distribution" do
+        expect(prompt).to include("1★: 10")
+      end
+
+      it "states the 2-star count from the distribution" do
+        expect(prompt).to include("2★: 20")
+      end
+
+      it "states the 3-star count from the distribution" do
+        expect(prompt).to include("3★: 30")
+      end
+
+      it "states the 4-star count from the distribution" do
+        expect(prompt).to include("4★: 40")
+      end
+
+      it "states the 5-star count from the distribution" do
+        expect(prompt).to include("5★: 50")
+      end
+
+      it "states the unrated count from the distribution" do
+        expect(prompt).to include("unrated: 5")
+      end
+
+      it "recomputes the total when the distribution changes" do
+        other_distribution = { "1" => 1, "2" => 1, "3" => 1, "4" => 1, "5" => 1, "unrated" => 1 }
+        other_prompt = described_class.build(reviews: reviews, distribution: other_distribution)
+
+        expect(other_prompt).to include("This app has 6 total reviews.")
+      end
+    end
+
+    context "sample-disclosure wording (BRA-84)" do
+      let(:prompt) { described_class.build(reviews: reviews, distribution: distribution) }
+
+      it "states the reviews below are a selected sample, not the full corpus" do
+        expect(prompt).to include("selected sample")
+        expect(prompt).to include("not the full corpus")
+      end
+
+      it "instructs deriving frequency and evidence_count from the stated distribution rather than the sample" do
+        expect(prompt).to include("Base `frequency` and `evidence_count` on the rating distribution stated above, not on how often something appears in this sample.")
       end
     end
   end

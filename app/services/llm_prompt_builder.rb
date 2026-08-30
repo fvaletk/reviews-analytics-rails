@@ -53,11 +53,16 @@ class LlmPromptBuilder
     }
   SCHEMA
 
-  def self.build(reviews:)
+  def self.build(reviews:, distribution:)
     serialized_reviews = serialize_reviews(reviews)
+    total = distribution.values.sum
 
     <<~PROMPT
       You are a competitive intelligence analyst. Analyze the following #{serialized_reviews.size} app reviews to identify patterns — pain points, complaints, feature requests, strengths, and opportunities — for competitive intelligence purposes.
+
+      This app has #{total} total reviews. Rating distribution: 1★: #{distribution["1"]}, 2★: #{distribution["2"]}, 3★: #{distribution["3"]}, 4★: #{distribution["4"]}, 5★: #{distribution["5"]}, unrated: #{distribution["unrated"]}.
+
+      The #{serialized_reviews.size} reviews below are a selected sample chosen to surface substantive, diverse feedback — not the full corpus. Base `frequency` and `evidence_count` on the rating distribution stated above, not on how often something appears in this sample.
 
       Reviews (JSON array of {store, rating, title, body}):
       #{serialized_reviews.to_json}

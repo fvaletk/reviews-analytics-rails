@@ -13,6 +13,7 @@ RSpec.describe LlmService do
   end
 
   let(:reviews) { [] }
+  let(:distribution) { { "1" => 0, "2" => 0, "3" => 0, "4" => 0, "5" => 0, "unrated" => 0 } }
   let(:success_output) do
     { "summary" => "Users love the app but complain about crashes.", "pain_points" => [] }
   end
@@ -21,7 +22,7 @@ RSpec.describe LlmService do
     allow(ENV).to receive(:fetch).and_call_original
     allow(ENV).to receive(:fetch).with("GEMINI_API_KEY").and_return("test-key")
     allow(Faraday).to receive(:new).and_return(connection)
-    allow(LlmPromptBuilder).to receive(:build).with(reviews: reviews).and_return("stubbed prompt")
+    allow(LlmPromptBuilder).to receive(:build).with(reviews: reviews, distribution: distribution).and_return("stubbed prompt")
     # Retry-path specs would otherwise sleep for real (2s + 4s per exhausted retry loop).
     allow(described_class).to receive(:sleep)
   end
@@ -40,6 +41,16 @@ RSpec.describe LlmService do
   end
 
   describe ".analyze — happy path" do
+    context "forwarding to LlmPromptBuilder" do
+      before { stubs.post("") { success_response } }
+
+      it "forwards reviews: and distribution: to LlmPromptBuilder.build" do
+        described_class.analyze(reviews: reviews, distribution: distribution)
+
+        expect(LlmPromptBuilder).to have_received(:build).with(reviews: reviews, distribution: distribution)
+      end
+    end
+
     context "when the response text is wrapped in ```json fences" do
       before do
         text = "```json\n#{success_output.to_json}\n```"
@@ -47,7 +58,7 @@ RSpec.describe LlmService do
       end
 
       it "returns a Result whose data is the parsed JSON" do
-        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).data).to eq(success_output)
       end
     end
 
@@ -58,7 +69,7 @@ RSpec.describe LlmService do
       end
 
       it "returns a Result whose data is the parsed JSON" do
-        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).data).to eq(success_output)
       end
     end
 
@@ -66,16 +77,16 @@ RSpec.describe LlmService do
       before { stubs.post("") { success_response } }
 
       it "returns a Result whose data is the parsed JSON" do
-        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).data).to eq(success_output)
       end
 
       it "returns a Result instance" do
-        expect(described_class.analyze(reviews: reviews)).to be_a(LlmService::Result)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution)).to be_a(LlmService::Result)
       end
 
       it "returns a Result whose usage equals the response's usageMetadata" do
         usage = { "promptTokenCount" => 100, "candidatesTokenCount" => 50, "thoughtsTokenCount" => 0 }
-        expect(described_class.analyze(reviews: reviews).usage).to eq(usage)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).usage).to eq(usage)
       end
     end
 
@@ -87,7 +98,7 @@ RSpec.describe LlmService do
       end
 
       it "returns a Result whose usage is an empty Hash" do
-        expect(described_class.analyze(reviews: reviews).usage).to eq({})
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).usage).to eq({})
       end
     end
 
@@ -98,7 +109,7 @@ RSpec.describe LlmService do
       end
 
       it "raises LlmService::Error" do
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /Invalid JSON response/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /Invalid JSON response/)
       end
     end
 
@@ -108,7 +119,7 @@ RSpec.describe LlmService do
       end
 
       it "raises LlmService::Error mentioning the unexpected structure" do
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /Unexpected response structure/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /Unexpected response structure/)
       end
     end
   end
@@ -121,7 +132,7 @@ RSpec.describe LlmService do
         success_response
       end
 
-      described_class.analyze(reviews: reviews)
+      described_class.analyze(reviews: reviews, distribution: distribution)
 
       config = captured_body["generationConfig"]
       expect(config["response_mime_type"]).to eq("application/json")
@@ -180,14 +191,14 @@ RSpec.describe LlmService do
     it "raises LlmService::TruncatedResponseError" do
       stubs.post("") { max_tokens_response }
 
-      expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::TruncatedResponseError)
+      expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::TruncatedResponseError)
     end
 
     it "does not call JSON.parse" do
       stubs.post("") { max_tokens_response }
       expect(JSON).not_to receive(:parse)
 
-      expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::TruncatedResponseError)
+      expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::TruncatedResponseError)
     end
 
     it "does not retry" do
@@ -197,7 +208,7 @@ RSpec.describe LlmService do
         max_tokens_response
       end
 
-      expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::TruncatedResponseError)
+      expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::TruncatedResponseError)
       expect(call_count).to eq(1)
     end
   end
@@ -211,7 +222,7 @@ RSpec.describe LlmService do
           [ 503, {}, "Service Unavailable" ]
         end
 
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /HTTP 503/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /HTTP 503/)
         expect(call_count).to eq(3)
       end
 
@@ -219,7 +230,7 @@ RSpec.describe LlmService do
         stubs.post("") { [ 503, {}, "Service Unavailable" ] }
 
         begin
-          described_class.analyze(reviews: reviews)
+          described_class.analyze(reviews: reviews, distribution: distribution)
         rescue LlmService::Error
           nil
         end
@@ -236,7 +247,7 @@ RSpec.describe LlmService do
           call_count < 3 ? [ 503, {}, "Service Unavailable" ] : success_response
         end
 
-        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
+        expect(described_class.analyze(reviews: reviews, distribution: distribution).data).to eq(success_output)
         expect(call_count).to eq(3)
       end
     end
@@ -249,7 +260,7 @@ RSpec.describe LlmService do
           [ 429, {}, "Too Many Requests" ]
         end
 
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /HTTP 429/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /HTTP 429/)
         expect(call_count).to eq(3)
       end
     end
@@ -262,7 +273,7 @@ RSpec.describe LlmService do
           raise Faraday::TimeoutError, "execution expired"
         end
 
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /timed out/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /timed out/)
         expect(call_count).to eq(3)
       end
 
@@ -270,7 +281,7 @@ RSpec.describe LlmService do
         stubs.post("") { raise Faraday::TimeoutError, "execution expired" }
 
         begin
-          described_class.analyze(reviews: reviews)
+          described_class.analyze(reviews: reviews, distribution: distribution)
         rescue LlmService::Error
           nil
         end
@@ -288,7 +299,7 @@ RSpec.describe LlmService do
           [ 400, {}, "Bad Request" ]
         end
 
-        expect { described_class.analyze(reviews: reviews) }.to raise_error(LlmService::Error, /HTTP 400/)
+        expect { described_class.analyze(reviews: reviews, distribution: distribution) }.to raise_error(LlmService::Error, /HTTP 400/)
         expect(call_count).to eq(1)
       end
 
@@ -296,7 +307,7 @@ RSpec.describe LlmService do
         stubs.post("") { [ 400, {}, "Bad Request" ] }
 
         begin
-          described_class.analyze(reviews: reviews)
+          described_class.analyze(reviews: reviews, distribution: distribution)
         rescue LlmService::Error
           nil
         end
@@ -312,7 +323,7 @@ RSpec.describe LlmService do
 
       expect(Rails.logger).to receive(:info).with(/input: 100, output: 50, thinking: 0/)
 
-      described_class.analyze(reviews: reviews)
+      described_class.analyze(reviews: reviews, distribution: distribution)
     end
   end
 
