@@ -34,18 +34,34 @@ class ReportJob < ApplicationJob
 
     update_status(report, :analyzing)
 
+    started_at = Process.clock_gettime(Process::CLOCK_MONOTONIC)
     result = LlmService.analyze(reviews: reviews_for_analysis)
-    ReportSchemaValidator.validate!(result)
+    llm_duration_ms = ((Process.clock_gettime(Process::CLOCK_MONOTONIC) - started_at) * 1000).round
+
+    ReportSchemaValidator.validate!(result.data)
 
     app_store_reviews_count, play_store_reviews_count = store_breakdown(reviews_for_analysis)
 
+    input_tokens = result.usage["promptTokenCount"]
+    output_tokens = result.usage["candidatesTokenCount"]
+    thinking_tokens = result.usage["thoughtsTokenCount"]
+    model = LlmService::MODEL
+    cost_usd = (input_tokens && output_tokens) ? LlmService.cost_usd(model: model, input_tokens: input_tokens, output_tokens: output_tokens) : nil
+
     report.update!(
-      structured_output: result,
+      structured_output: result.data,
       status: :complete,
       total_reviews_analyzed: total_reviews_analyzed,
       reviews_fetched_at: Time.current,
       app_store_reviews_count: app_store_reviews_count,
-      play_store_reviews_count: play_store_reviews_count
+      play_store_reviews_count: play_store_reviews_count,
+      model: model,
+      input_tokens: input_tokens,
+      output_tokens: output_tokens,
+      thinking_tokens: thinking_tokens,
+      llm_duration_ms: llm_duration_ms,
+      cost_usd: cost_usd,
+      usage_metadata: result.usage
     )
     broadcast(report)
     notify_workspace_members(report, app, "Report for #{app.name} is ready.")

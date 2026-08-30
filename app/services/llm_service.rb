@@ -4,13 +4,23 @@ class LlmService
   Error = Class.new(StandardError)
   TruncatedResponseError = Class.new(StandardError)
 
+  Result = Struct.new(:data, :usage, keyword_init: true)
+
   OPEN_TIMEOUT_SECONDS = 10
   READ_TIMEOUT_SECONDS = 180
 
   MAX_ATTEMPTS = 3
   RETRYABLE_STATUSES = [ 429, 503 ].freeze
 
-  GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+  MODEL = "gemini-2.5-flash"
+
+  GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/#{MODEL}:generateContent"
+
+  # USD per 1,000,000 tokens. Source: https://ai.google.dev/gemini-api/docs/pricing (gemini-2.5-flash, paid tier, text/image/video input).
+  # Thinking tokens are billed at the output rate — Google does not price them separately.
+  RATES_USD_PER_MILLION_TOKENS = {
+    "gemini-2.5-flash" => { input: 0.30, output: 2.50 }
+  }.freeze
 
   GEMINI_RESPONSE_SCHEMA = {
     type: "OBJECT",
@@ -110,11 +120,17 @@ class LlmService
     text = body.dig("candidates", 0, "content", "parts", 0, "text")
     raise Error, "Unexpected response structure: #{body.inspect}" if text.nil?
 
-    JSON.parse(strip_code_fences(text))
+    data = JSON.parse(strip_code_fences(text))
+    Result.new(data: data, usage: body["usageMetadata"] || {})
   rescue Faraday::Error => e
     raise Error, e.message
   rescue JSON::ParserError => e
     raise Error, "Invalid JSON response: #{e.message}"
+  end
+
+  def self.cost_usd(model:, input_tokens:, output_tokens:)
+    rates = RATES_USD_PER_MILLION_TOKENS.fetch(model)
+    (input_tokens.to_f * rates[:input] + output_tokens.to_f * rates[:output]) / 1_000_000.0
   end
 
   def self.request_with_retries(prompt)

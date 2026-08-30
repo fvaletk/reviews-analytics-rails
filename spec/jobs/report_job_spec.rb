@@ -65,9 +65,15 @@ RSpec.describe ReportJob, type: :job do
     }
   end
 
+  let(:llm_usage) do
+    { "promptTokenCount" => 1200, "candidatesTokenCount" => 340, "thoughtsTokenCount" => 56 }
+  end
+
+  let(:llm_analyze_result) { LlmService::Result.new(data: llm_result, usage: llm_usage) }
+
   before do
     allow(ScrapingService).to receive(:fetch).and_return(scraping_response)
-    allow(LlmService).to receive(:analyze).and_return(llm_result)
+    allow(LlmService).to receive(:analyze).and_return(llm_analyze_result)
     allow(ActionCable.server).to receive(:broadcast)
   end
 
@@ -114,6 +120,47 @@ RSpec.describe ReportJob, type: :job do
 
       it "calls LlmService with the app reviews" do
         expect(LlmService).to have_received(:analyze).with(reviews: anything)
+      end
+
+      it "records the model used for the call" do
+        expect(report.reload.model).to eq(LlmService::MODEL)
+      end
+
+      it "records the input token count from the usage metadata" do
+        expect(report.reload.input_tokens).to eq(1200)
+      end
+
+      it "records the output token count from the usage metadata" do
+        expect(report.reload.output_tokens).to eq(340)
+      end
+
+      it "records the thinking token count from the usage metadata" do
+        expect(report.reload.thinking_tokens).to eq(56)
+      end
+
+      it "records a non-negative llm_duration_ms" do
+        expect(report.reload.llm_duration_ms).to be >= 0
+      end
+
+      it "computes cost_usd from LlmService.cost_usd using the recorded model and token counts" do
+        expected_cost = LlmService.cost_usd(model: LlmService::MODEL, input_tokens: 1200, output_tokens: 340)
+
+        expect(report.reload.cost_usd.to_f).to eq(expected_cost)
+      end
+
+      it "stores the raw usageMetadata in usage_metadata" do
+        expect(report.reload.usage_metadata).to eq(llm_usage)
+      end
+    end
+
+    context "schema validation receives the parsed hash, not the Result struct" do
+      before do
+        allow(ReportSchemaValidator).to receive(:validate!).and_call_original
+        described_class.perform_now(report.id)
+      end
+
+      it "calls ReportSchemaValidator.validate! with result.data" do
+        expect(ReportSchemaValidator).to have_received(:validate!).with(llm_result)
       end
     end
 
@@ -363,6 +410,18 @@ RSpec.describe ReportJob, type: :job do
         expect(ActionCable.server).to have_received(:broadcast)
           .with("report_#{report.id}", { status: "failed", failure_reason: "timeout" })
       end
+
+      it "leaves the usage columns nil rather than writing zeros" do
+        report.reload
+        expect([
+          report.model,
+          report.input_tokens,
+          report.output_tokens,
+          report.thinking_tokens,
+          report.llm_duration_ms,
+          report.cost_usd
+        ]).to all(be_nil)
+      end
     end
 
     context "when ScrapingService raises an error and the workspace has members" do
@@ -418,6 +477,41 @@ RSpec.describe ReportJob, type: :job do
       it "saves the failure reason" do
         expect(report.reload.failure_reason).to eq("unexpected")
       end
+
+      it "leaves the usage columns nil rather than writing zeros" do
+        report.reload
+        expect([
+          report.model,
+          report.input_tokens,
+          report.output_tokens,
+          report.thinking_tokens,
+          report.llm_duration_ms,
+          report.cost_usd
+        ]).to all(be_nil)
+      end
+    end
+
+    context "when an unexpected error occurs during a reanalyze-only run (skip_scraping: true)" do
+      before do
+        allow(LlmService).to receive(:analyze).and_raise(RuntimeError, "unexpected")
+        described_class.perform_now(report.id, skip_scraping: true)
+      end
+
+      it "sets status to failed" do
+        expect(report.reload.status).to eq("failed")
+      end
+
+      it "leaves the usage columns nil regardless of report_type" do
+        report.reload
+        expect([
+          report.model,
+          report.input_tokens,
+          report.output_tokens,
+          report.thinking_tokens,
+          report.llm_duration_ms,
+          report.cost_usd
+        ]).to all(be_nil)
+      end
     end
 
     context "when skip_scraping: true" do
@@ -470,6 +564,24 @@ RSpec.describe ReportJob, type: :job do
 
       it "saves the LLM structured output" do
         expect(report.reload.structured_output).to eq(llm_result)
+      end
+
+      it "records the model used for the call" do
+        expect(report.reload.model).to eq(LlmService::MODEL)
+      end
+
+      it "records the input, output, and thinking token counts from the usage metadata" do
+        report.reload
+        expect([ report.input_tokens, report.output_tokens, report.thinking_tokens ]).to eq([ 1200, 340, 56 ])
+      end
+
+      it "computes and stores cost_usd" do
+        expected_cost = LlmService.cost_usd(model: LlmService::MODEL, input_tokens: 1200, output_tokens: 340)
+        expect(report.reload.cost_usd.to_f).to eq(expected_cost)
+      end
+
+      it "stores the raw usageMetadata in usage_metadata" do
+        expect(report.reload.usage_metadata).to eq(llm_usage)
       end
     end
 
@@ -598,6 +710,18 @@ RSpec.describe ReportJob, type: :job do
 
       it "does not save the invalid structured_output" do
         expect(report.reload.structured_output).to be_nil
+      end
+
+      it "leaves the usage columns nil rather than writing zeros" do
+        report.reload
+        expect([
+          report.model,
+          report.input_tokens,
+          report.output_tokens,
+          report.thinking_tokens,
+          report.llm_duration_ms,
+          report.cost_usd
+        ]).to all(be_nil)
       end
     end
   end

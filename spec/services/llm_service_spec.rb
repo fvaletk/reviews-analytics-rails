@@ -46,8 +46,8 @@ RSpec.describe LlmService do
         stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(text) ] }
       end
 
-      it "returns the parsed JSON as a Hash" do
-        expect(described_class.analyze(reviews: reviews)).to eq(success_output)
+      it "returns a Result whose data is the parsed JSON" do
+        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
       end
     end
 
@@ -57,16 +57,37 @@ RSpec.describe LlmService do
         stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(text) ] }
       end
 
-      it "returns the parsed JSON as a Hash" do
-        expect(described_class.analyze(reviews: reviews)).to eq(success_output)
+      it "returns a Result whose data is the parsed JSON" do
+        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
       end
     end
 
     context "when the response text has no fences at all" do
       before { stubs.post("") { success_response } }
 
-      it "returns the parsed JSON as a Hash" do
-        expect(described_class.analyze(reviews: reviews)).to eq(success_output)
+      it "returns a Result whose data is the parsed JSON" do
+        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
+      end
+
+      it "returns a Result instance" do
+        expect(described_class.analyze(reviews: reviews)).to be_a(LlmService::Result)
+      end
+
+      it "returns a Result whose usage equals the response's usageMetadata" do
+        usage = { "promptTokenCount" => 100, "candidatesTokenCount" => 50, "thoughtsTokenCount" => 0 }
+        expect(described_class.analyze(reviews: reviews).usage).to eq(usage)
+      end
+    end
+
+    context "when the response is missing usageMetadata entirely" do
+      before do
+        body = gemini_response(success_output.to_json)
+        body.delete("usageMetadata")
+        stubs.post("") { [ 200, { "Content-Type" => "application/json" }, body ] }
+      end
+
+      it "returns a Result whose usage is an empty Hash" do
+        expect(described_class.analyze(reviews: reviews).usage).to eq({})
       end
     end
 
@@ -215,7 +236,7 @@ RSpec.describe LlmService do
           call_count < 3 ? [ 503, {}, "Service Unavailable" ] : success_response
         end
 
-        expect(described_class.analyze(reviews: reviews)).to eq(success_output)
+        expect(described_class.analyze(reviews: reviews).data).to eq(success_output)
         expect(call_count).to eq(3)
       end
     end
@@ -292,6 +313,56 @@ RSpec.describe LlmService do
       expect(Rails.logger).to receive(:info).with(/input: 100, output: 50, thinking: 0/)
 
       described_class.analyze(reviews: reviews)
+    end
+  end
+
+  describe ".cost_usd" do
+    context "with a known model" do
+      let(:model) { LlmService::MODEL }
+      let(:rates) { LlmService::RATES_USD_PER_MILLION_TOKENS.fetch(model) }
+
+      it "computes the cost using the model's input and output rates per million tokens" do
+        input_tokens = 123_456
+        output_tokens = 78_901
+        expected = (input_tokens * rates[:input] + output_tokens * rates[:output]) / 1_000_000.0
+
+        result = described_class.cost_usd(model: model, input_tokens: input_tokens, output_tokens: output_tokens)
+
+        expect(result).to eq(expected)
+      end
+
+      it "prices exactly 1,000,000 input tokens at the model's input rate" do
+        result = described_class.cost_usd(model: model, input_tokens: 1_000_000, output_tokens: 0)
+
+        expect(result).to eq(rates[:input])
+      end
+
+      it "prices exactly 1,000,000 output tokens at the model's output rate" do
+        result = described_class.cost_usd(model: model, input_tokens: 0, output_tokens: 1_000_000)
+
+        expect(result).to eq(rates[:output])
+      end
+
+      it "prices input and output tokens separately rather than at a single blended rate" do
+        input_only = described_class.cost_usd(model: model, input_tokens: 1_000_000, output_tokens: 0)
+        output_only = described_class.cost_usd(model: model, input_tokens: 0, output_tokens: 1_000_000)
+
+        expect(input_only).not_to eq(output_only)
+      end
+    end
+
+    context "with an unknown model" do
+      it "raises KeyError" do
+        expect {
+          described_class.cost_usd(model: "not-a-real-model", input_tokens: 100, output_tokens: 100)
+        }.to raise_error(KeyError)
+      end
+    end
+  end
+
+  describe "LlmService::MODEL" do
+    it "is used to build the GEMINI_URL" do
+      expect(LlmService::GEMINI_URL).to include(LlmService::MODEL)
     end
   end
 
