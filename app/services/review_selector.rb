@@ -18,8 +18,24 @@
 class ReviewSelector
   Result = Struct.new(:app_store, :play_store, :metadata, keyword_init: true)
 
-  MAX_REVIEWS_TOTAL     = 500
-  MAX_REVIEWS_PER_STORE = 250
+  # Recalibrated in BRA-85, replacing the BRA-73/BRA-82 provisional 250/500 values.
+  #
+  # Measured against 15 real reports (5 generate, 5 refresh, 5 re-analyze) with
+  # persisted usage data: output_tokens mean 3,415 (range 2,737-4,264) across
+  # review counts 471-502, with no correlation between review count or input
+  # tokens and output_tokens. Conclusion: output is bounded by the fixed
+  # GEMINI_RESPONSE_SCHEMA shape, not by input volume, so the cap can be
+  # raised cheaply without risking truncated output.
+  #
+  # Doubled rather than raised further because all 15 samples cluster near the
+  # *old* cap (471-502 reviews) — there's no real data yet at higher volumes.
+  # A further increase should wait for usage data gathered at this new cap.
+  #
+  # max_output_tokens (16,000, in llm_service.rb) is deliberately left
+  # unchanged: it isn't the binding constraint, and even the highest observed
+  # output_tokens (4,264) leaves >70% headroom under it at this new cap.
+  MAX_REVIEWS_TOTAL     = 1000
+  MAX_REVIEWS_PER_STORE = 500
   MIN_BODY_LENGTH       = 12
 
   BANDS = {

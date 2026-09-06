@@ -669,7 +669,7 @@ RSpec.describe ReportJob, type: :job do
 
     context "BRA-82 regression, on top of band stratification — a single-store app still receives up to MAX_REVIEWS_TOTAL" do
       let!(:app_store_reviews) do
-        create_list(:review, 600, app: app, store: :app_store, reviewed_at: 1.day.ago)
+        create_list(:review, 1200, app: app, store: :app_store, reviewed_at: 1.day.ago)
       end
 
       before { described_class.perform_now(report.id, skip_scraping: true) }
@@ -692,7 +692,7 @@ RSpec.describe ReportJob, type: :job do
 
       it "persists a non-empty selection_metadata reflecting the real ReviewSelector run" do
         metadata = report.reload.selection_metadata
-        expect(metadata["distribution"].values.sum).to eq(600)
+        expect(metadata["distribution"].values.sum).to eq(1200)
       end
     end
 

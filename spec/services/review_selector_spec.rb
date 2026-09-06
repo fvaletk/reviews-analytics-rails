@@ -11,12 +11,12 @@ RSpec.describe ReviewSelector do
   end
 
   describe "constants" do
-    it "caps MAX_REVIEWS_TOTAL at 500" do
-      expect(described_class::MAX_REVIEWS_TOTAL).to eq(500)
+    it "caps MAX_REVIEWS_TOTAL at 1000" do
+      expect(described_class::MAX_REVIEWS_TOTAL).to eq(1000)
     end
 
-    it "caps MAX_REVIEWS_PER_STORE at 250" do
-      expect(described_class::MAX_REVIEWS_PER_STORE).to eq(250)
+    it "caps MAX_REVIEWS_PER_STORE at 500" do
+      expect(described_class::MAX_REVIEWS_PER_STORE).to eq(500)
     end
 
     it "sets MIN_BODY_LENGTH to 12" do
@@ -137,9 +137,9 @@ RSpec.describe ReviewSelector do
 
     context "when every band comfortably exceeds its quota" do
       let(:pool) do
-        review_pool(rating: 1, count: 200) +
-          review_pool(rating: 3, count: 200) +
-          review_pool(rating: 5, count: 200)
+        review_pool(rating: 1, count: 400) +
+          review_pool(rating: 3, count: 400) +
+          review_pool(rating: 5, count: 400)
       end
 
       let(:expected_quotas) do
@@ -166,8 +166,8 @@ RSpec.describe ReviewSelector do
     context "when the negative band is underfilled relative to its quota" do
       let(:pool) do
         review_pool(rating: 1, count: 20) +
-          review_pool(rating: 3, count: 200) +
-          review_pool(rating: 5, count: 200)
+          review_pool(rating: 3, count: 400) +
+          review_pool(rating: 5, count: 400)
       end
 
       it "includes every available negative review" do
@@ -196,7 +196,7 @@ RSpec.describe ReviewSelector do
     end
 
     context "when an app's reviews all fall in a single band" do
-      let(:pool) { review_pool(rating: 5, count: 400) }
+      let(:pool) { review_pool(rating: 5, count: 800) }
 
       it "selects only from the positive band" do
         bands = select_for_store[:bands]
@@ -223,7 +223,7 @@ RSpec.describe ReviewSelector do
       end
 
       it "fill leftover per-store headroom after rated bands are exhausted" do
-        pool = review_pool(rating: 1, count: 50) + review_pool(rating: nil, count: 300)
+        pool = review_pool(rating: 1, count: 50) + review_pool(rating: nil, count: 600)
 
         result = described_class.new(nil).send(:select_for_store, pool)
 
@@ -244,7 +244,7 @@ RSpec.describe ReviewSelector do
   describe ".select — cross-store spillover (BRA-82 regression, on top of band stratification)" do
     context "when an app has reviews in only one store" do
       let!(:app_store_reviews) do
-        600.times.map { |i| create(:review, app: app, store: :app_store, external_id: "s#{i}", rating: (i % 5) + 1, body: substantive_body("single#{i}"), reviewed_at: (i + 1).minutes.ago) }
+        1200.times.map { |i| create(:review, app: app, store: :app_store, external_id: "s#{i}", rating: (i % 5) + 1, body: substantive_body("single#{i}"), reviewed_at: (i + 1).minutes.ago) }
       end
 
       it "still selects the full MAX_REVIEWS_TOTAL from the single store" do
@@ -257,33 +257,33 @@ RSpec.describe ReviewSelector do
 
     context "when one store has far more reviews than the other (lopsided)" do
       let!(:app_store_reviews) do
-        480.times.map { |i| create(:review, app: app, store: :app_store, external_id: "a#{i}", rating: (i % 5) + 1, body: substantive_body("app#{i}"), reviewed_at: (i + 1).minutes.ago) }
+        960.times.map { |i| create(:review, app: app, store: :app_store, external_id: "a#{i}", rating: (i % 5) + 1, body: substantive_body("app#{i}"), reviewed_at: (i + 1).minutes.ago) }
       end
 
       let!(:play_store_reviews) do
-        20.times.map { |i| create(:review, app: app, store: :play_store, external_id: "p#{i}", rating: (i % 5) + 1, body: substantive_body("play#{i}"), reviewed_at: (i + 1).minutes.ago) }
+        40.times.map { |i| create(:review, app: app, store: :play_store, external_id: "p#{i}", rating: (i % 5) + 1, body: substantive_body("play#{i}"), reviewed_at: (i + 1).minutes.ago) }
       end
 
       it "includes every play_store review" do
         result = described_class.select(Review.where(app: app))
 
-        expect(result.play_store.size).to eq(20)
+        expect(result.play_store.size).to eq(40)
       end
 
-      it "fills the rest of the 500 total with app_store reviews via spillover" do
+      it "fills the rest of the 1000 total with app_store reviews via spillover" do
         result = described_class.select(Review.where(app: app))
 
-        expect(result.app_store.size).to eq(480)
+        expect(result.app_store.size).to eq(960)
       end
     end
 
     context "metadata consistency — spilled-in reviews are attributed to a band or unrated, not dropped from the count" do
       let!(:app_store_reviews) do
-        480.times.map { |i| create(:review, app: app, store: :app_store, external_id: "a#{i}", rating: (i % 5) + 1, body: substantive_body("app#{i}"), reviewed_at: (i + 1).minutes.ago) }
+        960.times.map { |i| create(:review, app: app, store: :app_store, external_id: "a#{i}", rating: (i % 5) + 1, body: substantive_body("app#{i}"), reviewed_at: (i + 1).minutes.ago) }
       end
 
       let!(:play_store_reviews) do
-        20.times.map { |i| create(:review, app: app, store: :play_store, external_id: "p#{i}", rating: (i % 5) + 1, body: substantive_body("play#{i}"), reviewed_at: (i + 1).minutes.ago) }
+        40.times.map { |i| create(:review, app: app, store: :play_store, external_id: "p#{i}", rating: (i % 5) + 1, body: substantive_body("play#{i}"), reviewed_at: (i + 1).minutes.ago) }
       end
 
       it "sums app_store band counts to exactly the number of app_store reviews selected" do
