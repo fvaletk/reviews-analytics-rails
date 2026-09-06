@@ -84,7 +84,9 @@
             <li class="report-list-item">
               <div class="report-list-item-header">
                 <span class="report-list-item-title"><%= complaint["title"] %></span>
-                <span class="badge badge-<%= complaint["frequency"] %>"><%= complaint["frequency"] %> freq</span>
+                <div class="report-badge-group">
+                  <span class="badge badge-<%= complaint["frequency"] %>"><%= complaint["frequency"] %> freq</span>
+                </div>
               </div>
               <p class="report-card-description"><%= complaint["description"] %></p>
             </li>
@@ -106,7 +108,9 @@
                 <li class="report-list-item">
                   <div class="report-list-item-header">
                     <span class="report-list-item-title"><%= item["title"] %></span>
-                    <span class="badge badge-<%= item["demand"] %>"><%= item["demand"] %> demand</span>
+                    <div class="report-badge-group">
+                      <span class="badge badge-<%= item["demand"] %>"><%= item["demand"] %> demand</span>
+                    </div>
                   </div>
                   <p class="report-card-description"><%= item["description"] %></p>
                 </li>
