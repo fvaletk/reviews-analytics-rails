@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_08_30_210000) do
+ActiveRecord::Schema[8.0].define(version: 2026_09_15_214606) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
@@ -23,6 +23,15 @@ ActiveRecord::Schema[8.0].define(version: 2026_08_30_210000) do
     t.integer "created_by_user_id", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.jsonb "icp"
+    t.text "icp_declined_reason"
+    t.string "icp_model"
+    t.integer "icp_input_tokens"
+    t.integer "icp_output_tokens"
+    t.decimal "icp_cost_usd", precision: 12, scale: 6
+    t.datetime "icp_generated_at"
+    t.jsonb "icp_usage_metadata", default: {}, null: false
+    t.index ["icp_model"], name: "index_apps_on_icp_model"
     t.index ["workspace_id"], name: "index_apps_on_workspace_id"
   end
 

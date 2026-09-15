@@ -14,6 +14,14 @@ class App < ApplicationRecord
   validates :created_by, presence: true
   validate :at_least_one_store_id
 
+  def icp_extracted?
+    icp.present?
+  end
+
+  def icp_extraction_attempted?
+    icp_generated_at.present?
+  end
+
   private
 
   def at_least_one_store_id
