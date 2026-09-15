@@ -147,6 +147,21 @@ RSpec.describe ReportJob, type: :job do
       end
     end
 
+    context "when enqueuing IcpExtractionJob raises (BRA-89)" do
+      before do
+        allow(IcpExtractionJob).to receive(:perform_later).and_raise(StandardError, "sidekiq unavailable")
+        described_class.perform_now(report.id)
+      end
+
+      it "still reaches complete" do
+        expect(report.reload.status).to eq("complete")
+      end
+
+      it "still saves the LLM structured output" do
+        expect(report.reload.structured_output).to eq(llm_result)
+      end
+    end
+
     context "schema validation receives the parsed hash, not the Result struct" do
       before do
         allow(ReportSchemaValidator).to receive(:validate!).and_call_original

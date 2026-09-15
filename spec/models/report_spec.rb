@@ -62,4 +62,87 @@ RSpec.describe Report, type: :model do
       expect(report).to be_valid
     end
   end
+
+  describe "#enqueue_icp_extraction (BRA-89)" do
+    let(:workspace) { create(:workspace) }
+    let(:app) { create(:app, workspace: workspace) }
+    let(:user) { create(:user) }
+    let(:report) { create(:report, app: app, generated_by: user, status: :pending) }
+
+    before { allow(IcpExtractionJob).to receive(:perform_later) }
+
+    context "when a report first reaches complete" do
+      it "enqueues IcpExtractionJob with the app_id" do
+        report.update!(status: :complete)
+
+        expect(IcpExtractionJob).to have_received(:perform_later).with(app.id)
+      end
+
+      it "enqueues exactly once" do
+        report.update!(status: :complete)
+
+        expect(IcpExtractionJob).to have_received(:perform_later).once
+      end
+    end
+
+    context "when a second report reaches complete for the same app" do
+      it "does not enqueue again — only the first complete report enqueues" do
+        report.update!(status: :complete)
+        other_report = create(:report, app: app, generated_by: user, status: :pending)
+        other_report.update!(status: :complete)
+
+        expect(IcpExtractionJob).to have_received(:perform_later).with(app.id).once
+      end
+    end
+
+    context "when the status changes to a non-complete status" do
+      it "does not enqueue on transition to fetching" do
+        report.update!(status: :fetching)
+
+        expect(IcpExtractionJob).not_to have_received(:perform_later)
+      end
+
+      it "does not enqueue on transition to analyzing" do
+        report.update!(status: :analyzing)
+
+        expect(IcpExtractionJob).not_to have_received(:perform_later)
+      end
+    end
+
+    context "when a report transitions to failed" do
+      it "does not enqueue" do
+        report.update!(status: :failed)
+
+        expect(IcpExtractionJob).not_to have_received(:perform_later)
+      end
+
+      it "does not consume the one shot — a later complete report still enqueues" do
+        report.update!(status: :failed)
+        other_report = create(:report, app: app, generated_by: user, status: :pending)
+
+        other_report.update!(status: :complete)
+
+        expect(IcpExtractionJob).to have_received(:perform_later).with(app.id)
+      end
+    end
+
+    context "when the app has already attempted ICP extraction" do
+      let(:app) { create(:app, :icp_declined, workspace: workspace) }
+
+      it "does not enqueue" do
+        report.update!(status: :complete)
+
+        expect(IcpExtractionJob).not_to have_received(:perform_later)
+      end
+    end
+
+    context "when an update does not change the status" do
+      it "does not enqueue again on an unrelated attribute update" do
+        report.update!(status: :complete)
+        report.update!(total_reviews_analyzed: 42)
+
+        expect(IcpExtractionJob).to have_received(:perform_later).once
+      end
+    end
+  end
 end

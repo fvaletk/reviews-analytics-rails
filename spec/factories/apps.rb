@@ -11,11 +11,12 @@ FactoryBot.define do
     trait :with_icp do
       icp do
         {
-          "segments" => [
+          "primary_segment" => "busy freelancers",
+          "confidence" => "high",
+          "signals" => [
             {
-              "name" => "Busy freelancers",
-              "description" => "Solo operators who need to track expenses on the go",
-              "pain_points" => [ "manual data entry", "no offline support" ]
+              "quote" => "I run my own freelance business and this helps me track expenses on the go",
+              "role_hint" => "freelancer"
             }
           ]
         }

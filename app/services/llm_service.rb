@@ -101,10 +101,39 @@ class LlmService
     required: [ "summary", "pain_points", "complaints", "feature_requests", "strengths", "opportunities" ]
   }.freeze
 
+  ICP_RESPONSE_SCHEMA = {
+    type: "OBJECT",
+    properties: {
+      primary_segment: { type: "STRING", nullable: true },
+      confidence:      { type: "STRING", enum: [ "high", "medium", "low" ], nullable: true },
+      signals: {
+        type: "ARRAY",
+        items: {
+          type: "OBJECT",
+          required: [ "quote", "role_hint" ],
+          properties: {
+            quote:     { type: "STRING" },
+            role_hint: { type: "STRING" }
+          }
+        }
+      },
+      declined_reason: { type: "STRING", nullable: true }
+    },
+    required: [ "primary_segment", "confidence", "signals", "declined_reason" ]
+  }.freeze
+
   def self.analyze(reviews:, distribution:)
     prompt = LlmPromptBuilder.build(reviews: reviews, distribution: distribution)
+    generate(prompt: prompt, schema: GEMINI_RESPONSE_SCHEMA)
+  end
 
-    response = request_with_retries(prompt)
+  def self.extract_icp(reviews:)
+    prompt = IcpPromptBuilder.build(reviews: reviews)
+    generate(prompt: prompt, schema: ICP_RESPONSE_SCHEMA)
+  end
+
+  def self.generate(prompt:, schema:)
+    response = request_with_retries(prompt, schema)
 
     raise Error, "HTTP #{response.status}" unless response.success?
 
@@ -133,14 +162,14 @@ class LlmService
     (input_tokens.to_f * rates[:input] + output_tokens.to_f * rates[:output]) / 1_000_000.0
   end
 
-  def self.request_with_retries(prompt)
+  def self.request_with_retries(prompt, schema)
     response = nil
 
     MAX_ATTEMPTS.times do |attempt|
       last_attempt = attempt == MAX_ATTEMPTS - 1
 
       begin
-        response = make_request(prompt)
+        response = make_request(prompt, schema)
       rescue Faraday::TimeoutError => e
         raise Error, "Request timed out: #{e.message}" if last_attempt
 
@@ -158,7 +187,7 @@ class LlmService
     response
   end
 
-  def self.make_request(prompt)
+  def self.make_request(prompt, schema)
     connection.post("") do |req|
       req.params["key"] = ENV.fetch("GEMINI_API_KEY")
       req.body = {
@@ -167,7 +196,7 @@ class LlmService
         ],
         generationConfig: {
           response_mime_type: "application/json",
-          response_schema: GEMINI_RESPONSE_SCHEMA,
+          response_schema: schema,
           max_output_tokens: 16_000,
           thinking_config: { thinking_budget: 0 }
         }
@@ -193,5 +222,5 @@ class LlmService
     text.to_s.strip.sub(/\A```(?:json)?\s*\n?/, "").sub(/\n?```\z/, "").strip
   end
 
-  private_class_method :request_with_retries, :make_request, :connection, :log_token_usage, :strip_code_fences
+  private_class_method :generate, :request_with_retries, :make_request, :connection, :log_token_usage, :strip_code_fences
 end

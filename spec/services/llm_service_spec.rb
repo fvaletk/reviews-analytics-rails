@@ -142,6 +142,84 @@ RSpec.describe LlmService do
     end
   end
 
+  describe ".extract_icp" do
+    let(:icp_output) do
+      { "primary_segment" => "restaurant managers", "confidence" => "high", "signals" => [], "declined_reason" => nil }
+    end
+
+    before do
+      allow(IcpPromptBuilder).to receive(:build).with(reviews: reviews).and_return("stubbed icp prompt")
+    end
+
+    it "forwards reviews: to IcpPromptBuilder.build" do
+      stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(icp_output.to_json) ] }
+
+      described_class.extract_icp(reviews: reviews)
+
+      expect(IcpPromptBuilder).to have_received(:build).with(reviews: reviews)
+    end
+
+    it "sends ICP_RESPONSE_SCHEMA (not GEMINI_RESPONSE_SCHEMA) as response_schema" do
+      captured_body = nil
+      stubs.post("") do |env|
+        captured_body = JSON.parse(env.body)
+        [ 200, { "Content-Type" => "application/json" }, gemini_response(icp_output.to_json) ]
+      end
+
+      described_class.extract_icp(reviews: reviews)
+
+      expect(captured_body["generationConfig"]["response_schema"]).to eq(JSON.parse(LlmService::ICP_RESPONSE_SCHEMA.to_json))
+    end
+
+    it "sends the IcpPromptBuilder-built prompt as the request text" do
+      captured_body = nil
+      stubs.post("") do |env|
+        captured_body = JSON.parse(env.body)
+        [ 200, { "Content-Type" => "application/json" }, gemini_response(icp_output.to_json) ]
+      end
+
+      described_class.extract_icp(reviews: reviews)
+
+      expect(captured_body.dig("contents", 0, "parts", 0, "text")).to eq("stubbed icp prompt")
+    end
+
+    it "returns a Result whose data is the parsed JSON" do
+      stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(icp_output.to_json) ] }
+
+      expect(described_class.extract_icp(reviews: reviews).data).to eq(icp_output)
+    end
+
+    it "returns a Result instance" do
+      stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(icp_output.to_json) ] }
+
+      expect(described_class.extract_icp(reviews: reviews)).to be_a(LlmService::Result)
+    end
+
+    it "strips ```json fences from the response text, same as .analyze" do
+      text = "```json\n#{icp_output.to_json}\n```"
+      stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response(text) ] }
+
+      expect(described_class.extract_icp(reviews: reviews).data).to eq(icp_output)
+    end
+
+    it "raises LlmService::TruncatedResponseError on MAX_TOKENS, same as .analyze" do
+      stubs.post("") { [ 200, { "Content-Type" => "application/json" }, gemini_response("not { valid json", finish_reason: "MAX_TOKENS") ] }
+
+      expect { described_class.extract_icp(reviews: reviews) }.to raise_error(LlmService::TruncatedResponseError)
+    end
+
+    it "retries on a 503 up to MAX_ATTEMPTS and raises LlmService::Error, same as .analyze" do
+      call_count = 0
+      stubs.post("") do
+        call_count += 1
+        [ 503, {}, "Service Unavailable" ]
+      end
+
+      expect { described_class.extract_icp(reviews: reviews) }.to raise_error(LlmService::Error, /HTTP 503/)
+      expect(call_count).to eq(3)
+    end
+  end
+
   describe "GEMINI_RESPONSE_SCHEMA enums — must match the report-schema contract exactly" do
     it "defines the severity enum for pain_points" do
       severity_enum = LlmService::GEMINI_RESPONSE_SCHEMA.dig(:properties, :pain_points, :items, :properties, :severity, :enum)

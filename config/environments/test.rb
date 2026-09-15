@@ -53,4 +53,7 @@ Rails.application.configure do
 
   # Disable host authorization so request specs can use www.example.com.
   config.hosts = nil
+
+  # Keep jobs out of the shared Redis — otherwise the dev Sidekiq container runs jobs enqueued by specs.
+  config.active_job.queue_adapter = :test
 end
