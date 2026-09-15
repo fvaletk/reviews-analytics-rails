@@ -2,7 +2,7 @@
 
 class NotificationsController < ApplicationController
   before_action :authenticate_user!
-  before_action :set_notification, only: [:update]
+  before_action :set_notification, only: [ :update ]
 
   def update
     authorize @notification

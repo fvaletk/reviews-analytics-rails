@@ -15,7 +15,7 @@ RSpec.describe ReportSchemaValidator do
   let(:valid_hash) do
     {
       "summary" => "Overall sentiment is mixed",
-      "pain_points" => [valid_pain_point],
+      "pain_points" => [ valid_pain_point ],
       "complaints" => [],
       "feature_requests" => [],
       "strengths" => [],
@@ -78,7 +78,7 @@ RSpec.describe ReportSchemaValidator do
       %w[title severity frequency description].each do |key|
         it "raises when the pain point is missing #{key}" do
           broken_point = valid_pain_point.reject { |k, _| k == key }
-          hash = valid_hash.merge("pain_points" => [broken_point])
+          hash = valid_hash.merge("pain_points" => [ broken_point ])
           expect { described_class.validate!(hash) }
             .to raise_error(ReportSchemaValidator::InvalidSchema, /pain_points\[0\] missing key: #{key}/)
         end
@@ -87,7 +87,7 @@ RSpec.describe ReportSchemaValidator do
 
     context "when a pain_points item is not a Hash" do
       it "raises" do
-        hash = valid_hash.merge("pain_points" => ["not a hash"])
+        hash = valid_hash.merge("pain_points" => [ "not a hash" ])
         expect { described_class.validate!(hash) }
           .to raise_error(ReportSchemaValidator::InvalidSchema, /pain_points\[0\] must be a Hash/)
       end
@@ -96,7 +96,7 @@ RSpec.describe ReportSchemaValidator do
     context "when a pain_points item has an unrecognized severity" do
       it "raises" do
         broken_point = valid_pain_point.merge("severity" => "urgent")
-        hash = valid_hash.merge("pain_points" => [broken_point])
+        hash = valid_hash.merge("pain_points" => [ broken_point ])
         expect { described_class.validate!(hash) }
           .to raise_error(ReportSchemaValidator::InvalidSchema, /pain_points\[0\] has invalid severity: "urgent"/)
       end
@@ -106,7 +106,7 @@ RSpec.describe ReportSchemaValidator do
       %w[critical high medium low].each do |severity|
         it "accepts #{severity} without raising" do
           point = valid_pain_point.merge("severity" => severity)
-          hash = valid_hash.merge("pain_points" => [point])
+          hash = valid_hash.merge("pain_points" => [ point ])
           expect { described_class.validate!(hash) }.not_to raise_error
         end
       end
@@ -125,7 +125,7 @@ RSpec.describe ReportSchemaValidator do
       let(:symbol_hash) do
         {
           summary: "Overall sentiment is mixed",
-          pain_points: [symbol_pain_point],
+          pain_points: [ symbol_pain_point ],
           complaints: [],
           feature_requests: [],
           strengths: [],

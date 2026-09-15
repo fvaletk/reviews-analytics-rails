@@ -3,14 +3,14 @@ require "sidekiq/web"
 Rails.application.routes.draw do
   devise_for :users, controllers: { omniauth_callbacks: "users/omniauth_callbacks" }
 
-  get  "sign_in",  to: "sessions#new",     as: :sign_in
+  get "sign_in",  to: "sessions#new",     as: :sign_in
   delete "sign_out", to: "sessions#destroy", as: :sign_out
 
-  resources :workspaces, only: [:new, :create, :show] do
-    resources :memberships, only: [:new, :create, :destroy],
+  resources :workspaces, only: [ :new, :create, :show ] do
+    resources :memberships, only: [ :new, :create, :destroy ],
                             controller: "workspace_memberships"
-    resources :apps, only: [:new, :create, :show, :edit, :update, :destroy] do
-      resources :reports, only: [:create, :show, :index] do
+    resources :apps, only: [ :new, :create, :show, :edit, :update, :destroy ] do
+      resources :reports, only: [ :create, :show, :index ] do
         member do
           post :reanalyze
           post :refresh
@@ -23,7 +23,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :notifications, only: [:update] do
+  resources :notifications, only: [ :update ] do
     collection do
       patch :mark_all_read
     end

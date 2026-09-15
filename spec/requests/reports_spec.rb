@@ -61,7 +61,7 @@ RSpec.describe "Reports", type: :request do
         post workspace_app_reports_path(workspace, the_app)
         report = Report.last
         enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j["job_class"] == "ReportJob" }
-        expect(enqueued["arguments"]).to eq([report.id])
+        expect(enqueued["arguments"]).to eq([ report.id ])
       end
 
       it "returns a turbo_stream response" do
@@ -765,7 +765,7 @@ RSpec.describe "Reports", type: :request do
         post refresh_workspace_app_report_path(workspace, the_app, existing_report)
         report = Report.order(:created_at).last
         enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j["job_class"] == "ReportJob" }
-        expect(enqueued["arguments"]).to eq([report.id])
+        expect(enqueued["arguments"]).to eq([ report.id ])
       end
 
       it "returns a turbo_stream response" do
@@ -877,7 +877,7 @@ RSpec.describe "Reports", type: :request do
         post refresh_workspace_app_reports_path(workspace, the_app)
         report = Report.last
         enqueued = ActiveJob::Base.queue_adapter.enqueued_jobs.find { |j| j["job_class"] == "ReportJob" }
-        expect(enqueued["arguments"]).to eq([report.id])
+        expect(enqueued["arguments"]).to eq([ report.id ])
       end
 
       it "returns a turbo_stream response" do

@@ -2,7 +2,7 @@
 
 class User < ApplicationRecord
   devise :omniauthable, :rememberable, :trackable,
-         omniauth_providers: [:google_oauth2]
+         omniauth_providers: [ :google_oauth2 ]
 
   has_many :workspace_memberships, dependent: :destroy
   has_many :workspaces, through: :workspace_memberships

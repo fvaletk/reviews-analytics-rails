@@ -30,11 +30,11 @@ RSpec.describe ScrapingService do
   describe ".fetch" do
     context "on a successful response" do
       let(:reviews_payload) do
-        { "reviews" => [{ "external_id" => "r1", "author" => "Alice", "rating" => 5 }] }
+        { "reviews" => [ { "external_id" => "r1", "author" => "Alice", "rating" => 5 } ] }
       end
 
       before do
-        stubs.post("/scrape") { [200, { "Content-Type" => "application/json" }, reviews_payload] }
+        stubs.post("/scrape") { [ 200, { "Content-Type" => "application/json" }, reviews_payload ] }
       end
 
       it "returns the parsed response body" do
@@ -45,7 +45,7 @@ RSpec.describe ScrapingService do
 
     context "on an HTTP 500 error" do
       before do
-        stubs.post("/scrape") { [500, {}, "Internal Server Error"] }
+        stubs.post("/scrape") { [ 500, {}, "Internal Server Error" ] }
       end
 
       it "raises ScrapingService::Error with the status code" do
