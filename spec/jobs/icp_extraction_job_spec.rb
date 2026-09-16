@@ -54,6 +54,39 @@ RSpec.describe IcpExtractionJob, type: :job do
 
         expect(ReviewSelector).not_to have_received(:select)
       end
+
+      it "does not call LlmService when performed without the force keyword (defaults to false)" do
+        described_class.perform_now(app.id)
+
+        expect(LlmService).not_to have_received(:extract_icp)
+      end
+    end
+
+    context "when the app has already attempted extraction and force: true is passed" do
+      let(:app) { create(:app, :icp_declined, workspace: workspace) }
+
+      before do
+        allow(LlmService).to receive(:extract_icp).and_return(LlmService::Result.new(data: extraction_data, usage: icp_usage))
+      end
+
+      it "bypasses the icp_extraction_attempted? guard and calls LlmService" do
+        described_class.perform_now(app.id, force: true)
+
+        expect(LlmService).to have_received(:extract_icp)
+      end
+
+      it "persists a new ICP result" do
+        described_class.perform_now(app.id, force: true)
+        app.reload
+
+        expect(app.icp["primary_segment"]).to eq("restaurant managers")
+      end
+
+      it "clears the previous declined_reason" do
+        described_class.perform_now(app.id, force: true)
+
+        expect(app.reload.icp_declined_reason).to be_nil
+      end
     end
 
     context "delegating review selection to ReviewSelector" do

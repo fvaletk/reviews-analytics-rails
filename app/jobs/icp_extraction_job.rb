@@ -3,9 +3,9 @@
 class IcpExtractionJob < ApplicationJob
   queue_as :default
 
-  def perform(app_id)
+  def perform(app_id, force: false)
     app = App.find(app_id)
-    return if app.icp_extraction_attempted?
+    return if app.icp_extraction_attempted? && !force
 
     selection = ReviewSelector.select(app.reviews)
     reviews = selection.app_store + selection.play_store

@@ -1,3 +1,7 @@
+<%
+  generating = local_assigns.fetch(:generating, false)
+  no_reviews = @app.reviews.empty?
+%>
 <div id="app_icp" class="app-show__section">
   <h2 class="app-show__section-title">Ideal Customer Profile</h2>
 
@@ -28,6 +32,26 @@
   <% else %>
     <div class="icp-empty-state">
       <p class="icp-empty-state__copy">No ideal customer profile has been generated for this app yet.</p>
+    </div>
+  <% end %>
+
+  <% if policy(@app).generate_report? %>
+    <div class="icp-actions">
+      <% if @app.icp_extraction_attempted? %>
+        <%= button_to (generating ? "Generating…" : "Regenerate"),
+              workspace_app_icp_path(@workspace, @app),
+              method: :post,
+              class: "action-rail__secondary-btn",
+              disabled: generating,
+              data: { turbo_confirm: "Regenerate the ideal customer profile? This will overwrite the current result." } %>
+      <% else %>
+        <%= button_to (generating ? "Generating…" : "Generate ICP"),
+              workspace_app_icp_path(@workspace, @app),
+              method: :post,
+              class: "btn-primary",
+              disabled: generating || no_reviews,
+              title: (no_reviews ? "Fetch reviews for this app before generating an ICP" : nil) %>
+      <% end %>
     </div>
   <% end %>
 </div>

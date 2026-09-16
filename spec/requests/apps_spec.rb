@@ -695,6 +695,140 @@ RSpec.describe "Apps", type: :request do
         expect(icp_section(response.body).text).to include("2 supporting quotes")
       end
     end
+
+    # -------------------------------------------------------------------------
+    # Generate/Regenerate ICP button (BRA-91)
+    # -------------------------------------------------------------------------
+    describe "Generate/Regenerate ICP button" do
+      def find_icp_button(body, text)
+        icp_section(body).css("button").find { |btn| btn.text.strip == text }
+      end
+
+      context "when ICP extraction has never run" do
+        let(:the_app) { create(:app, workspace: workspace) }
+
+        before do
+          make_member(role: :admin)
+          sign_in user
+        end
+
+        it "shows 'Generate ICP'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Generate ICP")).to be_present
+        end
+
+        it "does not show 'Regenerate'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Regenerate")).to be_nil
+        end
+      end
+
+      context "when the ICP has been extracted" do
+        let(:the_app) { create(:app, :with_icp, workspace: workspace) }
+
+        before do
+          make_member(role: :admin)
+          sign_in user
+        end
+
+        it "shows 'Regenerate'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Regenerate")).to be_present
+        end
+
+        it "does not show 'Generate ICP'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Generate ICP")).to be_nil
+        end
+
+        it "includes a turbo-confirm attribute on the Regenerate button" do
+          get workspace_app_path(workspace, the_app)
+          button = find_icp_button(response.body, "Regenerate")
+          expect(button["data-turbo-confirm"]).to be_present
+        end
+      end
+
+      context "when ICP extraction was declined" do
+        let(:the_app) { create(:app, :icp_declined, workspace: workspace) }
+
+        before do
+          make_member(role: :admin)
+          sign_in user
+        end
+
+        it "shows 'Regenerate'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Regenerate")).to be_present
+        end
+
+        it "does not show 'Generate ICP'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Generate ICP")).to be_nil
+        end
+
+        it "includes a turbo-confirm attribute on the Regenerate button" do
+          get workspace_app_path(workspace, the_app)
+          button = find_icp_button(response.body, "Regenerate")
+          expect(button["data-turbo-confirm"]).to be_present
+        end
+      end
+
+      context "when the app has no reviews" do
+        let(:the_app) { create(:app, workspace: workspace) }
+
+        before do
+          make_member(role: :admin)
+          sign_in user
+        end
+
+        it "renders 'Generate ICP' disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_icp_button(response.body, "Generate ICP")
+          expect(button["disabled"]).to be_present
+        end
+
+        it "explains why 'Generate ICP' is disabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_icp_button(response.body, "Generate ICP")
+          expect(button["title"]).to eq("Fetch reviews for this app before generating an ICP")
+        end
+      end
+
+      context "when the app has reviews" do
+        let(:the_app) { create(:app, workspace: workspace) }
+
+        before do
+          create(:review, app: the_app)
+          make_member(role: :admin)
+          sign_in user
+        end
+
+        it "renders 'Generate ICP' enabled" do
+          get workspace_app_path(workspace, the_app)
+          button = find_icp_button(response.body, "Generate ICP")
+          expect(button["disabled"]).to be_nil
+        end
+      end
+
+      context "when signed in as a collaborator" do
+        let(:the_app) { create(:app, :with_icp, workspace: workspace) }
+
+        before do
+          make_member(role: :collaborator)
+          sign_in user
+        end
+
+        it "does not show 'Generate ICP'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Generate ICP")).to be_nil
+        end
+
+        it "does not show 'Regenerate'" do
+          get workspace_app_path(workspace, the_app)
+          expect(find_icp_button(response.body, "Regenerate")).to be_nil
+        end
+      end
+    end
   end
 
   # ---------------------------------------------------------------------------

@@ -319,6 +319,15 @@
   margin: 0;
 }
 
+.icp-actions {
+  margin-top: var(--space-4);
+}
+
+.icp-actions .btn-primary,
+.icp-actions .action-rail__secondary-btn {
+  width: auto;
+}
+
 /* ============================================================
    Store details header — title + icon actions
    ============================================================ */

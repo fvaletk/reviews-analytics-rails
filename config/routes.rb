@@ -10,6 +10,7 @@ Rails.application.routes.draw do
     resources :memberships, only: [ :new, :create, :destroy ],
                             controller: "workspace_memberships"
     resources :apps, only: [ :new, :create, :show, :edit, :update, :destroy ] do
+      resource :icp, only: [ :create ], controller: "icps"
       resources :reports, only: [ :create, :show, :index ] do
         member do
           post :reanalyze
