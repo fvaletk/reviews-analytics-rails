@@ -531,6 +531,173 @@ RSpec.describe "Apps", type: :request do
   end
 
   # ---------------------------------------------------------------------------
+  # GET /workspaces/:workspace_id/apps/:id — ICP section (BRA-90)
+  # ---------------------------------------------------------------------------
+  describe "ICP section on the app show page" do
+    def icp_section(body)
+      Nokogiri::HTML::Document.parse(body).at_css("#app_icp")
+    end
+
+    context "when the ICP has been extracted" do
+      let(:the_app) do
+        create(:app, :with_icp, workspace: workspace, icp: {
+          "primary_segment" => "busy freelancers",
+          "confidence" => "high",
+          "signals" => [
+            { "quote" => "I track my invoices on the go", "role_hint" => "freelancer" },
+            { "quote" => "I manage rentals between calls", "role_hint" => "property manager" }
+          ]
+        })
+      end
+
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "shows the primary_segment headline" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("busy freelancers")
+      end
+
+      it "shows the confidence badge text" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("high confidence")
+      end
+
+      it "shows each role_hint" do
+        get workspace_app_path(workspace, the_app)
+        text = icp_section(response.body).text
+        expect(text).to include("freelancer")
+        expect(text).to include("property manager")
+      end
+
+      it "shows each quote" do
+        get workspace_app_path(workspace, the_app)
+        text = icp_section(response.body).text
+        expect(text).to include("I track my invoices on the go")
+        expect(text).to include("I manage rentals between calls")
+      end
+
+      it "shows the 'supporting quotes' label" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("supporting quote")
+      end
+    end
+
+    context "when ICP extraction was declined" do
+      let(:the_app) { create(:app, :icp_declined, workspace: workspace) }
+
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "shows the icp_declined_reason" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include(the_app.icp_declined_reason)
+      end
+
+      it "does not render the extracted headline" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).css(".icp-result")).to be_empty
+      end
+
+      it "does not render the never-run empty-state copy" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).not_to include("No ideal customer profile has been generated")
+      end
+
+      it "does not style the declined state as an error" do
+        get workspace_app_path(workspace, the_app)
+        html = icp_section(response.body).to_html
+        expect(html).not_to match(/error|critical|failed/i)
+      end
+    end
+
+    context "when ICP extraction has never run" do
+      let(:the_app) { create(:app, workspace: workspace) }
+
+      before do
+        make_member(role: :admin)
+        sign_in user
+      end
+
+      it "shows the empty-state copy" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("No ideal customer profile has been generated for this app yet.")
+      end
+    end
+
+    context "when signed in as a collaborator" do
+      let(:the_app) do
+        create(:app, :with_icp, workspace: workspace)
+      end
+
+      before do
+        make_member(role: :collaborator)
+        sign_in user
+      end
+
+      it "returns 200 OK" do
+        get workspace_app_path(workspace, the_app)
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "sees the extracted ICP" do
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include(the_app.icp["primary_segment"])
+      end
+    end
+
+    it "never mentions 'of N reviews' or a percentage" do
+      the_app = create(:app, :with_icp, workspace: workspace)
+      make_member(role: :admin)
+      sign_in user
+
+      get workspace_app_path(workspace, the_app)
+      html = icp_section(response.body).to_html
+
+      expect(html).not_to match(/of \d+ reviews/i)
+      expect(html).not_to match(/%/)
+    end
+
+    context "pluralisation of supporting quotes" do
+      it "renders '1 supporting quote' for a single signal" do
+        the_app = create(:app, :with_icp, workspace: workspace, icp: {
+          "primary_segment" => "busy freelancers",
+          "confidence" => "high",
+          "signals" => [
+            { "quote" => "quote 1", "role_hint" => "freelancer" }
+          ]
+        })
+        make_member(role: :admin)
+        sign_in user
+
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("1 supporting quote")
+        expect(icp_section(response.body).text).not_to include("1 supporting quotes")
+      end
+
+      it "renders 'N supporting quotes' for multiple signals sharing a role_hint" do
+        the_app = create(:app, :with_icp, workspace: workspace, icp: {
+          "primary_segment" => "busy freelancers",
+          "confidence" => "high",
+          "signals" => [
+            { "quote" => "quote 1", "role_hint" => "freelancer" },
+            { "quote" => "quote 2", "role_hint" => "freelancer" }
+          ]
+        })
+        make_member(role: :admin)
+        sign_in user
+
+        get workspace_app_path(workspace, the_app)
+        expect(icp_section(response.body).text).to include("2 supporting quotes")
+      end
+    end
+  end
+
+  # ---------------------------------------------------------------------------
   # GET /workspaces/:workspace_id/apps/:id/edit
   # ---------------------------------------------------------------------------
   describe "GET /workspaces/:workspace_id/apps/:id/edit" do

@@ -1,0 +1,33 @@
+<div id="app_icp" class="app-show__section">
+  <h2 class="app-show__section-title">Ideal Customer Profile</h2>
+
+  <% if @app.icp_extracted? %>
+    <div class="icp-result">
+      <div class="icp-result__header">
+        <h3 class="icp-result__segment"><%= @app.icp["primary_segment"] %></h3>
+        <span class="badge icp-confidence"><%= @app.icp["confidence"] %> confidence</span>
+      </div>
+
+      <div class="icp-signal-groups">
+        <% icp_signal_groups(@app).each do |role_hint, signals| %>
+          <div class="icp-signal-group">
+            <div class="icp-signal-group__heading">
+              <%= role_hint %> · <%= pluralize(signals.size, "supporting quote") %>
+            </div>
+            <ul class="icp-signal-group__quotes">
+              <% signals.each do |signal| %>
+                <li class="icp-signal-group__quote">&ldquo;<%= signal["quote"] %>&rdquo;</li>
+              <% end %>
+            </ul>
+          </div>
+        <% end %>
+      </div>
+    </div>
+  <% elsif @app.icp_extraction_attempted? %>
+    <p class="icp-declined"><%= @app.icp_declined_reason %></p>
+  <% else %>
+    <div class="icp-empty-state">
+      <p class="icp-empty-state__copy">No ideal customer profile has been generated for this app yet.</p>
+    </div>
+  <% end %>
+</div>
