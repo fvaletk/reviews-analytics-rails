@@ -17,16 +17,35 @@ competitive intelligence reports using Gemini.
 This repo is one half of Reviewly. The context — status, decisions, technical
 findings, ticket conventions — lives in the vault at `~/Projects/Capri`:
 
-| What | Where |
-|---|---|
-| Project file — status, decisions, Linear conventions | `01-projects/reviewly/reviewly.md` |
-| Current technical understanding, open threads | `01-projects/reviewly/analysis/current-understanding.md` |
-| Session logs — the reasoning behind past decisions | `01-projects/reviewly/analysis/YYYY-MM-DD-*.md` |
-| Captured findings awaiting triage | `01-projects/reviewly/findings/` |
+```yaml
+vault_project: reviewly
+vault_path: ~/Projects/Capri/01-projects/reviewly
+```
+
+This mapping is authoritative — the repo name doesn't match the project name, and
+both repos map to the same project folder. Anything resolving vault context reads
+it from here, not from the directory name.
+
+**Run `/project-context` at the start of a session.** It walks the folder in order
+and reports back what's unfinished, the current status, open findings, and the
+constraints that would make the obvious approach wrong. The files it reads:
+
+| What | Where | Lifecycle |
+|---|---|---|
+| **What's unfinished + the next action** | `01-projects/reviewly/handoff.md` | Rewritten. **Read first.** |
+| Project file — status, decisions, Linear conventions | `01-projects/reviewly/reviewly.md` | Status rewritten; decisions appended |
+| Current technical understanding, open threads | `01-projects/reviewly/analysis/current-understanding.md` | Rewritten |
+| Session logs — the reasoning behind past decisions | `01-projects/reviewly/analysis/YYYY-MM-DD-*.md` | Append-only |
+| In-flight thinking about things not yet built | `01-projects/reviewly/concepts/` | Rewritten until shipped |
+| Captured findings awaiting triage | `01-projects/reviewly/findings/` | Status-tracked |
+| Review passes — code, security, performance, UX | `01-projects/reviewly/audits/` | Append-only |
 
 **Read `current-understanding.md` before making decisions about the LLM pipeline,
 review sampling, or cost.** It records what has already been settled and why —
 including constraints that look real but aren't.
+
+The vault can be stale; this repo is the truth. Verify any path or line number
+before relying on it, and never write a ticket from vault memory alone.
 
 ### Reporting a finding
 
