@@ -189,25 +189,38 @@ Run this command to work on the next ticket. Follow each step exactly.
 2. Read the full ticket — title, description, and acceptance criteria
 3. **If anything is ambiguous or missing context: STOP. Ask the user. Do not guess.**
 4. Mark ticket **In Progress**
-5. Spawn **Sub-agent 1 — Implement**
+5. Create the ticket branch from the latest `staging`. The branch name is the ticket's
+   `gitBranchName` from Linear (e.g. `filivaletk/bra-97-put-gemini-behind-a-provider-adapter-llmservice-keeps-its`).
+   The working tree must be clean first — if `git status --porcelain` shows anything, STOP and ask the user.
+   ```bash
+   git checkout staging && git pull --ff-only origin staging
+   git checkout -b <gitBranchName>
+   ```
+   If the branch already exists (resuming), `git checkout <gitBranchName>` instead.
+6. Spawn **Sub-agent 1 — Implement**
    - Load relevant skills before writing any code (see Skills section below)
    - Implement exactly what the acceptance criteria describe, nothing more
-6. Spawn **Sub-agent 2 — Test**
+7. Spawn **Sub-agent 2 — Test**
    - Load `rspec-patterns` skill
    - Write RSpec specs. Do not modify implementation files.
-7. Spawn **Sub-agent 3 — Commit**
+8. Spawn **Sub-agent 3 — Commit** (pass the ticket ID, title, URL, and branch name)
    - Run `bundle exec rspec` — if any test fails, stop and report back
-   - Commit all changes: `git add -A && git commit -m "[BRA-XX] <ticket title>"`
-   - Push to `staging` branch: `git push origin staging`
-8. Mark ticket **Done** in Linear
-9. Loop — fetch next ticket
+   - Commit on the ticket branch: `git add -A && git commit -m "[BRA-XX] <ticket title>"`
+   - Push the ticket branch: `git push -u origin <gitBranchName>`
+   - Open a pull request into `staging` and return its URL
+9. Comment the PR URL on the Linear ticket. **Leave the ticket In Progress** — the user reviews
+   and merges the PR, then marks it Done.
+10. **Stop.** Do not fetch the next ticket. The next one may depend on this unmerged PR.
 
 ## Sub-agent Rules
 
 - Each sub-agent starts fresh. Pass all needed context explicitly.
 - Sessions are workers, not storage. Nothing important lives in a session.
 - Sub-agent 3 never pushes if tests are failing.
-- Never create a PR. Push directly to `staging`.
+- **Never push to `staging` or `main`.** Every ticket goes through a branch and a pull request
+  into `staging`, reviewed by the user. (Human review gate added 2026-10-06; previously the
+  pipeline pushed straight to `staging`.)
+- Never merge a PR and never mark a ticket Done — both are the user's.
 
 ---
 

@@ -1,17 +1,21 @@
 # /work-next-ticket
 
-Fetches the next Todo ticket from Linear, runs it through the full agent pipeline, and marks it Done.
+Fetches the next Todo ticket from Linear, runs it through the full agent pipeline on its own branch, and opens a pull request into `staging` for the user to review.
 
 ## What This Command Does
 
 1. Fetches the next **Todo** ticket from Linear (project: `Reviewly`, team: `Brain Spark`)
-2. Reads the full ticket — title, description, and acceptance criteria
+2. Reads the full ticket — title, description, acceptance criteria, and `gitBranchName`
 3. **Validates the ticket is unambiguous** — stops and asks you if anything is unclear
 4. Marks the ticket **In Progress** in Linear
-5. Spawns the **implement** agent with the full ticket content
-6. Spawns the **test** agent with the acceptance criteria and list of modified files
-7. Spawns the **commit** agent with the ticket ID and title
-8. Marks the ticket **Done** in Linear if the commit agent reports success
+5. **Creates the ticket branch** from the latest `staging`, named exactly the ticket's `gitBranchName`
+   (stops if the working tree isn't clean; checks out the existing branch when resuming)
+6. Spawns the **implement** agent with the full ticket content
+7. Spawns the **test** agent with the acceptance criteria and list of modified files
+8. Spawns the **commit** agent with the ticket ID, title, URL, and branch name — it pushes the branch and opens a PR into `staging`
+9. Comments the PR URL on the Linear ticket and **stops**. The ticket stays **In Progress** until you merge the PR and mark it Done.
+
+Never pushes to `staging` or `main`, never merges, never marks a ticket Done. (Human review gate added 2026-10-06.)
 
 ## How to Run
 
@@ -68,6 +72,8 @@ Files created or modified by implement agent:
 ```
 Ticket ID: BRA-XX
 Title: <title>
+Ticket URL: <linear url>
+Branch: <gitBranchName>
 Test results: <summary from test agent>
 ```
 
@@ -78,9 +84,11 @@ Test results: <summary from test agent>
 | Implement agent reports ambiguity | Stop, surface to you, wait for clarification |
 | Test agent finds failing tests | Stop, report failures, do not commit |
 | Test agent uncovers implementation bug | Stop, report to you — do not auto-fix |
+| Working tree not clean before branching | Stop, ask you — never stash or discard |
 | Commit agent cannot push | Stop, report the git error |
+| `gh` unavailable | Report the GitHub compare URL instead of a PR URL |
 
-On any failure, the ticket stays **In Progress** in Linear. Fix the issue manually, then run `/work-next-ticket` again — it will detect the in-progress ticket and resume from the commit step.
+On any failure, the ticket stays **In Progress** in Linear. Fix the issue manually, then run `/work-next-ticket` again — it will detect the in-progress ticket, check out its existing branch, and resume from the commit step.
 
 ## Linear State Management
 
@@ -88,5 +96,8 @@ On any failure, the ticket stays **In Progress** in Linear. Fix the issue manual
 |---|---|
 | Ticket fetched | Todo |
 | Validation passed | In Progress |
-| All agents done + pushed | Done |
+| PR opened | In Progress (stays — PR URL commented on the ticket) |
+| You merge the PR | You mark it Done |
 | Any failure | In Progress (stays) |
+
+Because the ticket stays In Progress until you merge, the orchestrator's WIP guard won't feed the next ticket until you've reviewed this one.
