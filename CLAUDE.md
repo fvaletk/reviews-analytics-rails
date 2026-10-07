@@ -1,249 +1,120 @@
-# CLAUDE.md
-
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 # Reviewly — Rails App
 
 SaaS that fetches App Store and Play Store reviews and generates structured
-competitive intelligence reports using Gemini.
+competitive intelligence reports with an LLM (Gemini, behind `LlmService`).
 
-**Stack:** Rails 8 · PostgreSQL · Redis · Sidekiq · Hotwire (Turbo + Stimulus) · Pundit · Docker  
-**Ruby:** 3.2.5 · **Assets:** Propshaft + Importmap (no Webpack/Vite)
+**Stack:** Rails 8 · PostgreSQL · Redis · Sidekiq · Hotwire (Turbo + Stimulus) · Pundit ·
+Propshaft + Importmap · Docker. Ruby version: `.ruby-version`.
 
 ---
 
 ## Project knowledge lives in the Obsidian vault
-
-This repo is one half of Reviewly. The context — status, decisions, technical
-findings, ticket conventions — lives in the vault at `~/Projects/Capri`:
 
 ```yaml
 vault_project: reviewly
 vault_path: ~/Projects/Capri/01-projects/reviewly
 ```
 
-This mapping is authoritative — the repo name doesn't match the project name, and
-both repos map to the same project folder. Anything resolving vault context reads
-it from here, not from the directory name.
+Both repos map to this one project folder; the repo name doesn't match it.
 
-**Run `/project-context` at the start of a session.** It walks the folder in order
-and reports back what's unfinished, the current status, open findings, and the
-constraints that would make the obvious approach wrong. The files it reads:
-
-| What | Where | Lifecycle |
-|---|---|---|
-| **What's unfinished + the next action** | `01-projects/reviewly/handoff.md` | Rewritten. **Read first.** |
-| Project file — status, decisions, Linear conventions | `01-projects/reviewly/reviewly.md` | Status rewritten; decisions appended |
-| Current technical understanding, open threads | `01-projects/reviewly/analysis/current-understanding.md` | Rewritten |
-| Session logs — the reasoning behind past decisions | `01-projects/reviewly/analysis/YYYY-MM-DD-*.md` | Append-only |
-| In-flight thinking about things not yet built | `01-projects/reviewly/concepts/` | Rewritten until shipped |
-| Captured findings awaiting triage | `01-projects/reviewly/findings/` | Status-tracked |
-| Review passes — code, security, performance, UX | `01-projects/reviewly/audits/` | Append-only |
-
-**Read `current-understanding.md` before making decisions about the LLM pipeline,
-review sampling, or cost.** It records what has already been settled and why —
-including constraints that look real but aren't.
-
-The vault can be stale; this repo is the truth. Verify any path or line number
-before relying on it, and never write a ticket from vault memory alone.
-
-### Reporting a finding
-
-Ran into a bug or figured something out mid-task? Run **`/report-issue`** —
-no arguments. It summarizes the issue **from the current conversation** and
-writes it to `01-projects/reviewly/findings/` in the vault, carrying over the
-file/line references, what was ruled out, and what's still unknown, plus the
-current branch and commit.
-
-It does not create a ticket and does not change any code. Triage happens later
-via `/triage-findings`, which verifies each finding before anything is filed.
-
-Use it instead of fixing unrelated things mid-task, and instead of losing the
-observation when the session ends.
+- **Run `/project-context` at the start of a session.** It reads the folder in order and
+  reports what's unfinished, the current status, and open findings.
+- **Read `analysis/current-understanding.md` before deciding anything about the LLM
+  pipeline, review sampling, or cost.** It records what's already settled and why.
+- **The vault can be stale; this repo is the truth.** Verify paths and line numbers in the code.
+- **Found an unrelated bug mid-task?** Run `/report-issue` (no arguments). It writes a finding
+  to the vault without creating a ticket or touching code. Don't fix it in the current ticket.
 
 ---
 
-## Prerequisites
+## Running things
 
-Before running `/work-next-ticket`, ensure Docker is running:
+Everything runs inside Docker. Start it with `docker compose up -d`. The repo is mounted
+at `/rails`, so files written locally appear in the container instantly — never use
+`docker compose cp`.
+
 ```bash
-docker compose up -d
+docker compose exec web bundle exec rspec                              # all specs
+docker compose exec web bundle exec rspec spec/models/user_spec.rb:42  # one example
+docker compose exec web bin/rubocop                                    # lint
+docker compose exec web bin/brakeman                                   # security scan
+docker compose exec web bin/rails db:migrate
 ```
-All agent commands execute inside the running containers.
+
+Services: `web`, `sidekiq`, `db`, `redis`. Tests are RSpec only — there is no Minitest.
 
 ---
-
-## Common Commands
-
-```bash
-# Start the server
-bin/rails server
-
-# Run all tests
-bundle exec rspec
-
-# Run a single spec file
-bundle exec rspec spec/models/user_spec.rb
-
-# Run a single example by line
-bundle exec rspec spec/models/user_spec.rb:42
-
-# Lint
-bin/rubocop
-
-# Security scan
-bin/brakeman
-
-# DB tasks
-bin/rails db:create db:migrate db:seed
-```
-
----
-
-## Running Commands
-
-All commands must be run inside the Docker container via `docker compose exec web <command>`.
-The local project directory is mounted into the container at `/rails` — any file written
-locally is immediately available inside the container.
-
-**Never use `docker compose cp` to copy files into the container. It is never needed.**
-Write files to the local filesystem, execute commands via `docker compose exec web`.
-
-```bash
-# Correct
-docker compose exec web bundle exec rspec spec/models/user_spec.rb
-
-# Wrong — never run directly on host
-bundle exec rspec spec/models/user_spec.rb
-```
 
 ## Architecture
 
-### Request Lifecycle
-
 ```
-Request → ApplicationController (authenticate_user!, authorize via Pundit)
-        → Thin controller → Service object (app/services/)
-        → Respond: redirect | Turbo Stream | JSON
+Request → controller (authenticate_user!, Pundit authorize) → service in app/services/ → redirect | Turbo Stream
 ```
-
-Business logic lives exclusively in `app/services/`. Controllers are thin: authenticate, authorize, call a service, respond. Models hold only validations, associations, enums, and scopes.
-
-### Background Jobs
-
-This project uses **Sidekiq** (not Solid Queue). Jobs live in `app/jobs/`. Each job represents one pipeline stage. Real-time UI updates are pushed from jobs via `Turbo::StreamsChannel.broadcast_replace_to`.
-
-### Report Pipeline
-
-Three modes — all create a **new** `Report` record (old reports are never overwritten):
-
-| Mode | Scraping | LLM |
-|---|---|---|
-| Generate (first time) | ✅ FastAPI call | ✅ |
-| Refresh + re-analyze | ✅ FastAPI call | ✅ |
-| Re-analyze only | ❌ uses stored reviews | ✅ |
-
-LLM output is validated by `ReportSchemaValidator` before being saved to `reports.structured_output` (JSONB). Never save unvalidated LLM output.
-
-### Authorization
-
-Pundit policies in `app/policies/`. Roles (`collaborator`, `admin`, `super_admin`) live on `WorkspaceMembership`, never on `User`. `NotAuthorizedError` renders 404 — never 403.
-
-### Domain Model
 
 ```
 User
   └── WorkspaceMemberships (role: super_admin | admin | collaborator)
         └── Workspace
               └── Apps
-                    ├── Reviews   (raw, deduplicated by external_id)
-                    └── Reports   (versioned JSONB output)
+                    ├── Reviews   (deduplicated by app + store + external_id)
+                    └── Reports   (one per run; LLM output in structured_output JSONB)
 
-Notifications (belongs to User + Report)
+Notifications (belong to User + Report)
 ```
 
-Content (Apps, Reviews, Reports) belongs to the **Workspace**, not the creating user.
+Content belongs to the **Workspace**, not to the user who created it. Removing a member
+never removes data.
+
+**Report runs** (`ReportJob`, Sidekiq) — every run creates a new `Report`; old ones are
+never overwritten:
+
+| `report_type` | Scrapes via FastAPI | Calls the LLM |
+|---|---|---|
+| `generate` | ✅ | ✅ |
+| `refresh` | ✅ | ✅ |
+| `reanalyze` | ❌ uses stored reviews | ✅ |
+
+ICP extraction runs separately in `IcpExtractionJob`. Job progress reaches the UI through
+Turbo Stream broadcasts.
+
+Design system: `DESIGN.md`.
 
 ---
 
-## Design System
+## Rules
 
-Design doc: `DESIGN.md`. Key rules for any view work:
+Conventions live in `.claude/rules/`. Each file is scoped by `paths:` and loads when you
+work on matching files.
 
-- Dark mode is primary (`data-theme="dark"` on `<html>`). Both themes must work.
-- **Never** use hardcoded color values — use CSS variables only (`var(--accent)`, etc.)
-- Tailwind is allowed for spacing, flex, grid, and layout utilities **only** — not for colors
-- Severity badges always use `var(--font-mono)` — never body font
-- Accent color (`--accent`) is amber — never use for destructive actions (use `var(--critical)`)
-- Primary button CTAs use uppercase tracking, never sentence case
-- No drop shadows in dark mode — use borders and background elevation instead
-- Always import the Google Fonts link tag in `application.html.erb`
-
----
-
-## /work-next-ticket
-
-Run this command to work on the next ticket. Follow each step exactly.
-
-1. Fetch the next **Todo** ticket from Linear project `Reviewly` (team: Brain Spark)
-2. Read the full ticket — title, description, and acceptance criteria
-3. **If anything is ambiguous or missing context: STOP. Ask the user. Do not guess.**
-4. Mark ticket **In Progress**
-5. Create the ticket branch from the latest `staging`. The branch name is the ticket's
-   `gitBranchName` from Linear (e.g. `filivaletk/bra-97-put-gemini-behind-a-provider-adapter-llmservice-keeps-its`).
-   The working tree must be clean first — if `git status --porcelain` shows anything, STOP and ask the user.
-   ```bash
-   git checkout staging && git pull --ff-only origin staging
-   git checkout -b <gitBranchName>
-   ```
-   If the branch already exists (resuming), `git checkout <gitBranchName>` instead.
-6. Spawn **Sub-agent 1 — Implement**
-   - Load relevant skills before writing any code (see Skills section below)
-   - Implement exactly what the acceptance criteria describe, nothing more
-7. Spawn **Sub-agent 2 — Test**
-   - Load `rspec-patterns` skill
-   - Write RSpec specs. Do not modify implementation files.
-8. Spawn **Sub-agent 3 — Commit** (pass the ticket ID, title, URL, and branch name)
-   - Run `bundle exec rspec` — if any test fails, stop and report back
-   - Commit on the ticket branch: `git add -A && git commit -m "[BRA-XX] <ticket title>"`
-   - Push the ticket branch: `git push -u origin <gitBranchName>`
-   - Open a pull request into `staging` and return its URL
-9. Comment the PR URL on the Linear ticket. **Leave the ticket In Progress** — the user reviews
-   and merges the PR, then marks it Done.
-10. **Stop.** Do not fetch the next ticket. The next one may depend on this unmerged PR.
-
-## Sub-agent Rules
-
-- Each sub-agent starts fresh. Pass all needed context explicitly.
-- Sessions are workers, not storage. Nothing important lives in a session.
-- Sub-agent 3 never pushes if tests are failing.
-- **Never push to `staging` or `main`.** Every ticket goes through a branch and a pull request
-  into `staging`, reviewed by the user. (Human review gate added 2026-10-06; previously the
-  pipeline pushed straight to `staging`.)
-- Never merge a PR and never mark a ticket Done — both are the user's.
-
----
-
-## Skills
-
-Load by name before writing code. Match to the work at hand.
-
-| Skill | Load when... |
+| Rule | Covers |
 |---|---|
-| `rails-conventions` | any Rails file |
-| `rspec-patterns` | writing tests |
-| `turbo-patterns` | views, broadcasts, Stimulus |
-| `pundit-patterns` | policies, authorization |
-| `domain-model` | touching any model or migration |
-| `report-schema` | anything touching LLM output or reports |
-| `design-system` | any view, layout, or UI component |
+| `rails.md` | Ruby under `app/`, `lib/`, `config/`, `db/` |
+| `pundit.md` | policies, controllers |
+| `turbo.md` | views, JS, jobs, channels, controllers |
+| `design-system.md` | views, stylesheets, Stimulus — on top of `DESIGN.md` |
+| `llm-pipeline.md` | LLM service, prompt builders, validators, report jobs |
+| `scrape-contract.md` | `ScrapingService` — the FastAPI contract |
+| `rspec.md` | `spec/` |
 
-Skills live in `.claude/skills/`.
+---
 
-## Environment Variables
+## Tickets
 
-All required environment variables are documented in `.env.example`.
-Sub-agents must use `ENV.fetch('KEY')` in code — never read `.env` directly.
-Hooks in `.claude/hooks/` block read access to `.env` and credential files.
-**Never write, copy, or generate credential values into `.env` — the developer
-manages this file manually. If a variable is missing, report it and stop.**
+Tickets are worked with `/work-next-ticket` — the steps live in
+`.claude/commands/work-next-ticket.md`. Whoever is working, these always hold:
+
+- One branch per ticket, named the ticket's `gitBranchName`, cut from the latest `staging`.
+- **Never push to `staging` or `main`.** Every ticket goes through a pull request into
+  `staging`. (Human review gate since 2026-10-06.)
+- Never merge a PR and never mark a ticket Done — both are the user's.
+- Never commit or push with failing specs.
+
+---
+
+## Credentials
+
+- Every environment variable is listed in `.env.example`. Read config with `ENV.fetch("KEY")`.
+- **Never read or write `.env`, and never generate credential values.** The developer manages
+  it by hand. If a variable is missing, say which one and stop.
+- `.claude/hooks/block-sensitive-files.sh` blocks Read/Edit/Write on `.env` files
+  (`.env.example` stays readable).

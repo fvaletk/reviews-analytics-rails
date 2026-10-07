@@ -9,7 +9,7 @@ SENSITIVE_PATTERN='\.env[^a-zA-Z]|\.env$|GOOGLE_CLIENT|GOOGLE_OAUTH|GEMINI_API_K
 # Block Read/Write/Edit tool calls on .env files
 if [ "$TOOL" != "Bash" ] && [ -n "$FILE" ]; then
   BASENAME=$(basename "$FILE")
-  if echo "$BASENAME" | grep -qE '^\.env(\.|$)'; then
+  if echo "$BASENAME" | grep -qE '^\.env(\.|$)' && [ "$BASENAME" != ".env.example" ]; then
     echo "Blocked: $FILE is a sensitive credentials file and cannot be accessed by Claude." >&2
     exit 2
   fi

@@ -6,10 +6,6 @@ description: >
   modified by the implement agent.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
-skills:
-  - rspec-patterns
-  - rails-conventions
-  - domain-model
 color: green
 ---
 
@@ -94,7 +90,7 @@ If the ticket produces a mix of testable and non-testable files, write specs onl
 
 ## Step 2 — Write the Tests
 
-Follow the `rspec-patterns` skill exactly:
+Follow `.claude/rules/rspec.md` exactly:
 
 - **Request specs** for controllers — test HTTP behaviour, not internals
 - **Model specs** for validations, scopes, enums, class methods
