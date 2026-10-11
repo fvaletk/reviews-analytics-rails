@@ -12,9 +12,6 @@ paths:
 
 # LLM pipeline
 
-Read `current-understanding.md` in the vault (see `CLAUDE.md`) before changing
-prompts, review sampling, model choice, or anything that affects cost.
-
 ## Output shape lives in code
 
 There are two LLM outputs, each with a prompt builder and a validator:
