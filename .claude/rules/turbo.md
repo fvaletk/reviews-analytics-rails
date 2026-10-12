@@ -14,38 +14,18 @@ Turbo handles page updates. Stimulus handles behavior. Never write `fetch()` or
 
 ## Turbo Streams from jobs
 
-Broadcast after each status change; the view subscribes to the same stream name.
+Broadcast with `Turbo::StreamsChannel.broadcast_*_to`; the view subscribes with
+`turbo_stream_from` using the same streamables. Reference: notifications —
+`ReportJob#broadcast_notification` prepends `notifications/notification` into
+`notification_list`, subscribed in `layouts/_navbar.html.erb` via
+`turbo_stream_from current_user, :notifications`.
 
-```ruby
-Turbo::StreamsChannel.broadcast_replace_to(
-  "report_#{report.id}",
-  target: "report_status",
-  partial: "reports/status",
-  locals: { report: report }
-)
-```
+- Partials used in broadcasts take locals only, no instance variables (jobs have no
+  controller context).
+- Broadcast targets are DOM ids that exist on every page that subscribes.
 
-```erb
-<%= turbo_stream_from "report_#{@report.id}" %>
-<div id="report_status"><%= render "reports/status", report: @report %></div>
-```
+## Legacy: raw ActionCable
 
-- Partials used in broadcasts take locals only — no instance variables.
-- Broadcast targets have a stable `id`.
-
-## Controllers
-
-Turbo Stream response for in-page updates, redirect for full navigations. Always
-include a `format.html` fallback.
-
-## Links and buttons
-
-- DELETE links: `data-turbo-method="delete"`. Destructive actions: `data-turbo-confirm`.
-- **Anything that redirects off-site (OAuth, payments, SSO)** uses `button_to … method: :post,
-  data: { turbo: false }` — never `link_to`. OAuth needs a POST, and Turbo intercepting the
-  form breaks the redirect cycle.
-
-## Stimulus
-
-Client-side behavior only — toggling visibility, ActionCable subscriptions, DOM updates.
-Unsubscribe in `disconnect()`.
+Report status (`ReportChannel` → `report_status_controller.js`) sends JSON and
+patches the DOM in Stimulus. Don't extend this pattern for new features; use Turbo
+Streams.

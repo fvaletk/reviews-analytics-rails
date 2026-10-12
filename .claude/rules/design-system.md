@@ -28,6 +28,7 @@ for applying it.
 - No drop shadows in dark mode — elevation comes from borders and background.
 - Text inputs use the existing `.form-field` / `.form-label` / `.form-input` / `.form-hint`
   classes in `app/assets/stylesheets/components/forms.css`.
+- Views contain no logic beyond `if`/`unless` and iteration.
 
 ## Where new CSS goes
 
@@ -46,10 +47,3 @@ own ticket. If you're unsure whether something is in scope, it isn't.
 Propshaft serves `app/assets/` directly. Never run `rails assets:precompile` in
 development. If `public/assets/` exists it shadows the source files and CSS changes
 won't show — delete it: `docker compose exec web rm -rf public/assets`.
-
-## Before committing a view
-
-- [ ] No inline styles, hex colors, or Tailwind color/font/spacing utilities
-- [ ] Right font variable for each text role
-- [ ] Works in both themes (toggle `data-theme` on `<html>`)
-- [ ] Interactive elements have hover states using variables
