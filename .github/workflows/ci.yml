@@ -89,6 +89,9 @@ jobs:
         env:
           RAILS_ENV: test
           DATABASE_URL: postgres://postgres:postgres@localhost:5432/reviews_analytics_test
+          # Devise's initializer fetches these at boot, before rails_helper sets them
+          GOOGLE_OAUTH_CLIENT_ID: test_oauth_client_id
+          GOOGLE_OAUTH_CLIENT_SECRET: test_oauth_client_secret
           # REDIS_URL: redis://localhost:6379/0
         run: bin/rails db:test:prepare && bundle exec rspec
 
