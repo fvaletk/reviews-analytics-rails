@@ -1,4 +1,4 @@
-FROM ruby:3.2.5-slim
+FROM ruby:3.4.11-slim
 
 WORKDIR /rails
 
